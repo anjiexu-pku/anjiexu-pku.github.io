@@ -6,6 +6,7 @@ redirect_from:
   - /about/
   - /about.html
 ---
+
 About Me
 ========
 
@@ -27,8 +28,8 @@ Publications
 Awards
 ======
 
-- 2024: **Outstanding Graduate Student**, Northwestern Polytechnical University (西北工业大学优秀毕业生)
-- 2023: **Special Prize (University Group)**, CCF Sinan Cup National Quantum Computing Competition (CCF量子计算司南杯全国高校组特等奖)
+- 2024, **Outstanding Graduate Student**, Northwestern Polytechnical University (西北工业大学优秀毕业生)
+- 2023, **National Special Prize (University Group)**, CCF Sinan Cup Quantum Computing Competition (CCF量子计算司南杯全国高校组特等奖)
 
 Skills
 ======
