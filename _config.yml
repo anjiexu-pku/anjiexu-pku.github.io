@@ -183,6 +183,7 @@ exclude:
   - README
   - tmp
   - vendor
+  - _posts/demo_blog
 keep_files:
   - .git
   - .svn

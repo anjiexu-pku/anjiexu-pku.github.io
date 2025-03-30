@@ -121,7 +121,9 @@
   (facebook, $facebook-color),
   (twitter, $twitter-color),
   (google-plus, $google-plus-color),
-  (linkedin, $linkedin-color);
+  (linkedin, $linkedin-color),
+  (qzone, #12B7F5),
+  (zhihu, #0084FF);
 
   @each $socialnetwork, $color in $social {
     &--#{$socialnetwork} {
