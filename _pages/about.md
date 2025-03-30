@@ -23,6 +23,10 @@ Publications
 ======
 - Still working on it...
 
+Blog
+======
+I maintain a blog where I share my thoughts on computer science, technology, and life.You can find my latest posts on the [Blog](/blog/) page.
+
 Awards
 ======
 - 2024: **Outstanding Graduate Student**, Northwestern Polytechnical University (西北工业大学优秀毕业生)
@@ -31,6 +35,7 @@ Awards
 Skills
 ======
 - **Programming Languages**: Rust, Python, C++
+
 
 Hobbies
 ======
