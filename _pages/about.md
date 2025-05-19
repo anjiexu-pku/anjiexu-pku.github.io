@@ -34,7 +34,7 @@ Publications
 
 Blog
 ======
-I maintain a [blog](https://xuanjie-xu.github.io/blog/) where I share my thoughts on computer science, technology, and life.
+I maintain a [blog](/blog/) where I share my thoughts on computer science, technology, and life.
 
 Awards
 ======
@@ -42,10 +42,16 @@ Awards
 - 2024, **Outstanding Graduate Student**, Northwestern Polytechnical University (西北工业大学优秀毕业生)
 - 2023, **National Special Prize (University Group)**, CCF Sinan Cup Quantum Computing Competition (CCF量子计算司南杯全国高校组特等奖)
 
+Experience
+==========
+
+- Teaching Assistant of *Data Structures and Algorithms (A)* by Prof. [Leye Wang](https://wangleye.github.io/), Peking University, 2024 Fall
+
 Skills
 ======
 
 - **Programming Languages**: Rust, Python, C++
+- I also have some experience with **Operating Systems**.
 
 
 Hobbies
