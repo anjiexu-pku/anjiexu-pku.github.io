@@ -27,7 +27,7 @@ Publications
 * *ChatPD: An LLM-driven Paper-Dataset Networking System* <br/>
 **Anjie Xu**, Ruiqing Ding, Leye Wang  
 **CCF-A**, KDD 2025 Applied Data Science Track  
-\[[Code](https://github.com/ChatPD-web/ChatPD)\] | \[[Website](https://chatpd-web.github.io/chatpd-web/)\] | *Preprint to be available soon on arXiv*
+[Paper](https://arxiv.org/abs/2505.22349) | [Code](https://github.com/ChatPD-web/ChatPD) | [Website](https://chatpd-web.github.io/chatpd-web/)
 
 ![ChatPD System Architecture](https://github.com/ChatPD-web/ChatPD/raw/main/pic/system_arch.png)
 
