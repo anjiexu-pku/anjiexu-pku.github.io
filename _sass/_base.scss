@@ -313,3 +313,49 @@ b, i, strong, em, blockquote, p, q, span, figure, img, h1, h2, header, input, a,
   -webkit-transition: $global-transition;
   transition: $global-transition;
 }
+
+/* ==========================================================================
+   MERMAID DIAGRAMS
+   ========================================================================== */
+
+.mermaid {
+  text-align: center;
+  margin: 1.5em 0;
+  background-color: transparent;
+  
+  svg {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .node rect,
+  .node circle,
+  .node ellipse,
+  .node polygon {
+    fill: #f9f9f9;
+    stroke: #333;
+    stroke-width: 1px;
+  }
+  
+  .edgePath .path {
+    stroke: #333;
+    stroke-width: 1.5px;
+  }
+  
+  .cluster rect {
+    fill: #ffffde;
+    stroke: #aaaa33;
+    stroke-width: 1px;
+  }
+  
+  .node text {
+    font-family: trebuchet ms, verdana, arial, sans-serif;
+    font-size: 14px;
+  }
+  
+  .edgeLabel {
+    background-color: #e8eaee;
+    font-family: trebuchet ms, verdana, arial, sans-serif;
+    font-size: 12px;
+  }
+}
