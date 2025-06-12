@@ -1,3 +1,40 @@
 <script src="{{ base_path }}/assets/js/main.min.js"></script>
 
+<!-- Mermaid support -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      themeVariables: {
+        fontFamily: 'trebuchet ms, verdana, arial, sans-serif;',
+        fontSize: '16px',
+        darkMode: false
+      },
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+      }
+    });
+    
+    // Find all code blocks with class 'language-mermaid' and replace them with mermaid diagrams
+    const mermaidBlocks = document.querySelectorAll('code.language-mermaid');
+    mermaidBlocks.forEach((block, index) => {
+      const mermaidCode = block.textContent;
+      const mermaidDiv = document.createElement('div');
+      mermaidDiv.className = 'mermaid';
+      mermaidDiv.textContent = mermaidCode;
+      mermaidDiv.id = 'mermaid-' + index;
+      
+      // Replace the code block with mermaid div
+      block.parentNode.replaceWith(mermaidDiv);
+    });
+    
+    // Re-render mermaid diagrams
+    mermaid.init();
+  });
+</script>
+
 {% include analytics.html %}
