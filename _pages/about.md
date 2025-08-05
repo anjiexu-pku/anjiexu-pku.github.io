@@ -45,6 +45,7 @@ Awards
 Experience
 ==========
 
+- Teaching Assistant of *AI Agent Programming Practice* by Dr. [Bojie Li](https://01.me/) (Co-Founder & Chief Scientist of Pine AI), Zhongguancun Academy ([Course Homepage](https://01.me/2025/07/ai-agent-hackathon-2025summer/)), 2025 Summer 
 - Teaching Assistant of *Data Structures and Algorithms (A)* by Prof. [Leye Wang](https://wangleye.github.io/), Peking University, 2024 Fall
 
 Skills
