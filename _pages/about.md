@@ -31,6 +31,16 @@ Publications
 
 ![ChatPD System Architecture](https://github.com/ChatPD-web/ChatPD/raw/main/pic/system_arch.png)
 
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%;">
+  <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=114997917195022&bvid=BV1jjt8zwE5f&cid=31585208959&p=1" 
+          scrolling="no" 
+          frameborder="0" 
+          allowfullscreen 
+          allow="fullscreen; picture-in-picture"
+          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+  </iframe>
+</div>
+
 
 Blog
 ======
