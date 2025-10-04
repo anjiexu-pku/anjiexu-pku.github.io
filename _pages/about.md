@@ -27,11 +27,11 @@ Publications
 * *ChatPD: An LLM-driven Paper-Dataset Networking System* <br/>
 **Anjie Xu**, Ruiqing Ding, Leye Wang  
 **CCF-A**, KDD 2025 Applied Data Science Track  
-[Paper](https://arxiv.org/abs/2505.22349) | [Code](https://github.com/ChatPD-web/ChatPD) | [Website](https://chatpd-web.github.io/chatpd-web/)
+[Paper](https://arxiv.org/abs/2505.22349) | [Code](https://github.com/ChatPD-web/ChatPD) | [Deployed Website](https://chatpd-web.github.io/chatpd-web/) | [Video](https://www.bilibili.com/video/BV1jjt8zwE5f/)
 
 ![ChatPD System Architecture](https://github.com/ChatPD-web/ChatPD/raw/main/pic/system_arch.png)
 
-<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
+<!-- <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
   <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=114997917195022&bvid=BV1jjt8zwE5f&cid=31585208959&p=1" 
           scrolling="no" 
           frameborder="0" 
@@ -39,7 +39,7 @@ Publications
           allow="fullscreen; picture-in-picture"
           style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
   </iframe>
-</div>
+</div> -->
 
 
 Blog
@@ -53,10 +53,12 @@ Awards
 - 2023, **National Special Prize (University Group)**, CCF Sinan Cup Quantum Computing Competition (CCF量子计算司南杯全国高校组特等奖)
 
 Experience
-==========
+===========
 
 - Teaching Assistant of *AI Agent Programming Practice* by Dr. [Bojie Li](https://01.me/) (Co-Founder & Chief Scientist of Pine AI), Zhongguancun Academy ([Course Homepage](https://01.me/2025/07/ai-agent-hackathon-2025summer/)), 2025 Summer 
 - Teaching Assistant of *Data Structures and Algorithms (A)* by Prof. [Leye Wang](https://wangleye.github.io/), Peking University, 2024 Fall
+- Quantitative Trading Intern, MetaLight Inc., Oct 2023 – Jun 2024  
+  Built and optimized quantitative trading algorithms for power trading systems
 
 Skills
 ======
