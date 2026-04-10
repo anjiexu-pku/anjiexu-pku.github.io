@@ -14,6 +14,7 @@ I am a Ph.D. student supervised by Prof. [Leye Wang](https://wangleye.github.io/
 Prior to this, I completed my bachelor's degree in Computer Science at Northwestern Polytechnical University.
 
 My research interests include **Academic Data Management**, **Data Privacy Protection**, and related fields. I am passionate about exploring innovative solutions to challenges in Computer Science, Mathematics, and Physics.
+Recently, I have also been working on **AI Agents** and **Agent Skill Evaluation**, especially on practical benchmarking systems for utility and security.
 
 Education
 =========
@@ -23,6 +24,15 @@ Education
 
 Publications
 ============
+
+* *SkillTester: Benchmarking Utility and Security of Agent Skills* <br/>
+Leye Wang, Zixing Wang, **Anjie Xu**  
+**arXiv:2603.28815**, 2026  
+[Paper](https://arxiv.org/abs/2603.28815) | [Code](https://github.com/skilltester-ai/skilltester) | [Website](https://skilltester.ai)
+
+SkillTester is an agent-driven benchmark system for evaluating agent skills from both utility and security perspectives. It compares paired baseline and with-skill executions, preserves raw task-level evidence, and generates structured reports that help users judge whether a skill is useful and safe before adoption.
+
+![SkillTester Dashboard](https://github.com/skilltester-ai/skilltester/raw/main/pics/skilltester.png)
 
 * *ChatPD: An LLM-driven Paper-Dataset Networking System* <br/>
 **Anjie Xu**, Ruiqing Ding, Leye Wang  

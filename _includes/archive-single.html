@@ -66,5 +66,13 @@
       <p><a href="{{ post.slidesurl }}">Download Slides</a></p>
     {% endif %}
 
+    {% if post.projecturl or post.codeurl %}
+      <p>
+        {% if post.projecturl %}<a href="{{ post.projecturl }}">Project Page</a>{% endif %}
+        {% if post.projecturl and post.codeurl %} | {% endif %}
+        {% if post.codeurl %}<a href="{{ post.codeurl }}">Code</a>{% endif %}
+      </p>
+    {% endif %}
+
   </article>
 </div>
