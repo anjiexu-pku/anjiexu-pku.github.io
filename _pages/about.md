@@ -28,7 +28,7 @@ Publications
 * *SkillTester: Benchmarking Utility and Security of Agent Skills* <br/>
 Leye Wang, Zixing Wang, **Anjie Xu**  
 **arXiv:2603.28815**, 2026  
-[Paper](https://arxiv.org/abs/2603.28815) | [Code](https://github.com/skilltester-ai/skilltester) | [Website](https://skilltester.ai)
+[Paper](https://arxiv.org/abs/2603.28815) | [Code](https://github.com/skilltester-ai/skilltester) | [skilltester.ai](https://skilltester.ai)
 
 SkillTester is an agent-driven benchmark system for evaluating agent skills from both utility and security perspectives. It compares paired baseline and with-skill executions, preserves raw task-level evidence, and generates structured reports that help users judge whether a skill is useful and safe before adoption.
 

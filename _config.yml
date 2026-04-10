@@ -31,8 +31,8 @@ author:
   email            : "QuteQuteFun@163.com" 
 
   # Academic websites
-  arxiv            : "https://arxiv.org/abs/2603.28815"
-  arxiv_label      : "arXiv:2603.28815"
+  # arxiv            : # URL
+  # arxiv_label      : # Optional label for the sidebar link
   googlescholar    : "https://scholar.google.com/citations?user=riMH5DYAAAAJ&hl=en&oi=sra"
   # impactstory      : # URL
   # orcid            : "http://orcid.org/yourorcidurl"
