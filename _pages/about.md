@@ -54,7 +54,10 @@ SkillTester is an agent-driven benchmark system for evaluating agent skills from
 
 Blog
 ======
-I maintain a [blog](/blog/) where I share my thoughts on computer science, technology, and life.
+
+{% for post in site.posts %}
+- **{{ post.date | date: "%Y-%m-%d" }}** — [{{ post.title }}]({{ post.url }})
+{% endfor %}
 
 Awards
 ======
