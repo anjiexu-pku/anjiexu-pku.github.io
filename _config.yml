@@ -93,7 +93,11 @@ future                   : true
 read_more                : "disabled" # if enabled, adds "Read more" links to excerpts
 talkmap_link             : false #change to true to add link to talkmap on talks page
 comments:
-  provider               : # false (default), "disqus", "discourse", "facebook", "google-plus", "staticman", "custom"
+  provider               : "giscus" # "giscus", "disqus", "discourse", "facebook", "google-plus", "staticman", "custom", false (default)
+  giscus:
+    repo_id              : "" # Get from https://giscus.app
+    category             : "Announcements"
+    category_id          : "" # Get from https://giscus.app
   disqus:
     shortname            :
   discourse:
@@ -148,7 +152,9 @@ social:
 
 # Analytics
 analytics:
-  provider               :  "false" # false (default), "google", "google-universal", "google-analytics-4", "custom"
+  provider               :  "goatcounter" # "goatcounter", "google", "google-universal", "google-analytics-4", "custom", false (default)
+  goatcounter:
+    code                 : "" # your GoatCounter site code, e.g. "mysite" → https://mysite.goatcounter.com
   google:
     tracking_id          :
 
