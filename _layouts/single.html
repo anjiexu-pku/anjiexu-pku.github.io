@@ -69,8 +69,6 @@ layout: default
         {% include page__taxonomy.html %}
       </footer>
 
-      {% if page.share %}{% include social-share.html %}{% endif %}
-
       {% include post_pagination.html %}
     </div>
 
@@ -92,4 +90,6 @@ layout: default
       </div>
     </div>
   {% endif %}
+
+  {% if page.share %}{% include social-share.html %}{% endif %}
 </div>
