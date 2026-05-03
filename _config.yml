@@ -95,9 +95,9 @@ talkmap_link             : false #change to true to add link to talkmap on talks
 comments:
   provider               : "giscus" # "giscus", "disqus", "discourse", "facebook", "google-plus", "staticman", "custom", false (default)
   giscus:
-    repo_id              : "" # Get from https://giscus.app
+    repo_id              : "R_kgDONQpUvw"
     category             : "Announcements"
-    category_id          : "" # Get from https://giscus.app
+    category_id          : "DIC_kwDONQpUv84C8Oqn"
   disqus:
     shortname            :
   discourse:
@@ -154,7 +154,7 @@ social:
 analytics:
   provider               :  "goatcounter" # "goatcounter", "google", "google-universal", "google-analytics-4", "custom", false (default)
   goatcounter:
-    code                 : "" # your GoatCounter site code, e.g. "mysite" → https://mysite.goatcounter.com
+    code                 : "tanktechnology"
   google:
     tracking_id          :
 
