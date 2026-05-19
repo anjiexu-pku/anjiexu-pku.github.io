@@ -50,7 +50,7 @@ function switchLang(lang) {
 
 This is Part 2 of a three-part series on Rust concurrency. In [Part 1]({% post_url 2026-05-19-rust-concurrency-1-foundation %}), we covered the foundations: ownership, `Send`/`Sync`, `Arc`, and `Result`. Now we fill the toolbox. Each primitive below appears in real production code — we'll see where and why.
 
-By the end of this article, you'll be able to answer: "given a concurrency problem, which Rust primitive do I reach for?"
+By the end of this article, the answer to "given a concurrency problem, which Rust primitive do I reach for?" should be clear.
 
 </div>
 
@@ -58,7 +58,7 @@ By the end of this article, you'll be able to answer: "given a concurrency probl
 
 这是 Rust 并发系列三篇中的第二篇。在[第一篇]({% post_url 2026-05-19-rust-concurrency-1-foundation %})中，我们覆盖了基础：所有权、`Send`/`Sync`、`Arc` 和 `Result`。现在我们来填充工具箱。下面每个原语都出现在真实的生产代码中 — 我们会看到在哪里以及为什么。
 
-读完这篇文章，你将能够回答："给定一个并发问题，我应该用哪个 Rust 原语？"
+读完这篇文章，就能回答："给定一个并发问题，应该用哪个 Rust 原语？"
 
 </div>
 
@@ -72,7 +72,7 @@ Rust offers two concurrency models, and production code often uses both. The key
 
 ### `std::thread` — OS Threads
 
-Use when: CPU-bound work, blocking I/O, or when you need `!Send` types (thread locals, raw pointers in FFI).
+Use when: CPU-bound work, blocking I/O, or when `!Send` types are needed (thread locals, raw pointers in FFI).
 
 ```rust
 use std::thread;
@@ -87,7 +87,7 @@ let result = handle.join().unwrap();  // wait, get return value
 assert_eq!(result, 42);
 ```
 
-In the asterinas kernel project, OS threads back the `WaitQueue` and spinlock-based synchronization. When you're inside a kernel, there is no async runtime — threads are the only option.
+In the asterinas kernel project, OS threads back the `WaitQueue` and spinlock-based synchronization. When working inside a kernel, there is no async runtime — threads are the only option.
 
 ### `tokio::spawn` — Async Tasks
 
@@ -206,7 +206,7 @@ let data = tokio::task::spawn_blocking(|| {
 
 ## 2. The Shared-State Triad: `Mutex`, `RwLock`, `Atomic*`
 
-When multiple tasks need access to the same data, you have three tools. The trick is matching the tool to the access pattern.
+When multiple tasks need access to the same data, there are three tools. The trick is matching the tool to the access pattern.
 
 ### `Mutex<T>` — Mutual Exclusion
 
@@ -287,7 +287,7 @@ The `Ordering` argument controls memory ordering guarantees. For simple counters
 
 ## 2. 共享状态三件套：`Mutex`、`RwLock`、`Atomic*`
 
-当多个 task 需要访问同一数据时，你有三个工具。技巧在于根据访问模式选择合适的工具。
+当多个 task 需要访问同一数据时，有三个工具可用。技巧在于根据访问模式选择合适的工具。
 
 ### `Mutex<T>` — 互斥锁
 
@@ -502,11 +502,11 @@ let (write_tx, write_rx) = mpsc::channel::<WriteRecord>(cap * 2 + 100);
 
 ## 4. Concurrency Control: Three Patterns
 
-Pipelines aren't one-size-fits-all. Depending on the workload, you need different concurrency control strategies.
+Pipelines aren't one-size-fits-all. Depending on the workload, different concurrency control strategies make sense.
 
 ### Pattern A: `buffer_unordered(n)` — Fixed Concurrency Window
 
-When you know the right concurrency level and it doesn't change:
+When the right concurrency level is known and doesn't change:
 
 ```rust
 use futures::StreamExt;
@@ -522,7 +522,7 @@ Used in ChatPD for the builder stage (48 concurrent request builders) and LLM ca
 
 ### Pattern B: `Semaphore` — Adaptive Concurrency
 
-When you want to start conservatively and ramp up after seeing success:
+When the goal is to start conservatively and ramp up after seeing success:
 
 ```rust
 use tokio::sync::Semaphore;
@@ -561,7 +561,7 @@ Used in ChatPD for the fetch stage: starts at 4 concurrent fetches, ramps to 32 
 
 ### Pattern C: `JoinSet` — Dynamic Task Collection
 
-When you don't know how many tasks you'll spawn in advance, or tasks complete at different rates:
+When the number of tasks to spawn is unknown in advance, or tasks complete at different rates:
 
 ```rust
 use tokio::task::JoinSet;
@@ -583,7 +583,7 @@ while let Some(result) = set.join_next().await {
 }
 ```
 
-`JoinSet` handles task lifecycle: you can `spawn`, `abort`, and collect results without tracking individual `JoinHandle`s. Used in ChatPD's fetch stage for round 0.
+`JoinSet` handles task lifecycle: it supports `spawn`, `abort`, and result collection without tracking individual `JoinHandle`s. Used in ChatPD's fetch stage for round 0.
 
 </div>
 
@@ -591,11 +591,11 @@ while let Some(result) = set.join_next().await {
 
 ## 4. 并发控制：三种模式
 
-管道不是一种尺寸适合所有情况。根据工作负载，你需要不同的并发控制策略。
+管道不是一种尺寸适合所有情况。根据工作负载，需要不同的并发控制策略。
 
 ### 模式 A：`buffer_unordered(n)` — 固定并发窗口
 
-当你事先知道正确的并发级别且它不变化时：
+当事先知道正确的并发级别且它不变化时：
 
 ```rust
 use futures::StreamExt;
@@ -611,7 +611,7 @@ futures::stream::iter(items)
 
 ### 模式 B：`Semaphore` — 自适应并发
 
-当你想保守地开始，在成功之后递增并发时：
+当希望保守地开始，在成功之后递增并发时：
 
 ```rust
 use tokio::sync::Semaphore;
@@ -650,7 +650,7 @@ for item in items {
 
 ### 模式 C：`JoinSet` — 动态任务集合
 
-当你事先不知道会有多少 task，或者 task 以不同的速度完成时：
+当事先不知道会有多少 task，或者 task 以不同的速度完成时：
 
 ```rust
 use tokio::task::JoinSet;
@@ -672,7 +672,7 @@ while let Some(result) = set.join_next().await {
 }
 ```
 
-`JoinSet` 管理 task 生命周期：你可以 `spawn`、`abort` 和收集结果，而不需要追踪单个 `JoinHandle`。在 ChatPD 的 fetch 阶段 round 0 中使用。
+`JoinSet` 管理 task 生命周期：可以 `spawn`、`abort` 和收集结果，而不需要追踪单个 `JoinHandle`。在 ChatPD 的 fetch 阶段 round 0 中使用。
 
 </div>
 
@@ -682,7 +682,7 @@ while let Some(result) = set.join_next().await {
 
 ## 5. Errors in Concurrent Code: The Propagation Problem
 
-In sequential code, `?` propagates errors up the call stack. In concurrent code, errors happen in separate tasks with separate call stacks. You need an explicit strategy.
+In sequential code, `?` propagates errors up the call stack. In concurrent code, errors happen in separate tasks with separate call stacks. An explicit strategy is needed.
 
 ### Strategy 1: Task-Local Errors → `Result`
 
@@ -772,7 +772,7 @@ while let Some(result) = set.join_next().await {
 
 ## 5. 并发代码中的错误：传播问题
 
-在顺序代码中，`?` 沿着调用栈传播错误。在并发代码中，错误发生在拥有独立调用栈的独立 task 中。你需要一套明确的策略。
+在顺序代码中，`?` 沿着调用栈传播错误。在并发代码中，错误发生在拥有独立调用栈的独立 task 中，因此需要一套明确的策略。
 
 ### 策略 1：Task 局部错误 → `Result`
 

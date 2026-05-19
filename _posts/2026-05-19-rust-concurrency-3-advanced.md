@@ -170,7 +170,7 @@ async fn fetch_html_with_retry(url: &str) -> Result<String> {
 
 ### Why This Is Elegant
 
-1. **One line per request**: `wait_for_rate_limit().await` is all you add.
+1. **One line per request**: `wait_for_rate_limit().await` is the only call needed per request.
 2. **Read-heavy, write-rare**: `RwLock` gives lock-free reads in the common case.
 3. **Race-condition-proof**: the "only extend" logic means concurrent 429s don't shorten the cooldown.
 4. **Works across any number of tasks**: 12 fetchers or 200 LLM callers — same gate, same behavior.
@@ -290,7 +290,7 @@ async fn fetch_html_with_retry(url: &str) -> Result<String> {
 
 ### 为什么这是优雅的
 
-1. **每个请求一行**：你只加了 `wait_for_rate_limit().await`。
+1. **每个请求一行**：只需加 `wait_for_rate_limit().await` 一行。
 2. **读多写少**：`RwLock` 在常见情况下提供无锁读取。
 3. **竞态安全**："只延长"逻辑意味着并发的 429 不会缩短冷却期。
 4. **跨任意数量 task 工作**：12 个 fetcher 或 200 个 LLM caller — 同一个闸门，同样行为。
@@ -317,7 +317,7 @@ With the rate-limit gate in place, the pipeline no longer created storms. But it
 
 ### Why It Happened
 
-We assumed the configured concurrency limit was _safe_. In practice, external service capacity varies by time of day, server load, and deployment state. Starting at full throttle is like flooring the accelerator on an icy road — you find the limit by exceeding it.
+We assumed the configured concurrency limit was _safe_. In practice, external service capacity varies by time of day, server load, and deployment state. Starting at full throttle is like flooring the accelerator on an icy road — the limit is found by exceeding it.
 
 ### The Elegant Solution: Adaptive Concurrency with `Semaphore`
 
@@ -417,7 +417,7 @@ for round in 0..max_retry_rounds {
 1. **Discovers capacity**: doesn't assume the configured limit is always available.
 2. **Single mechanism for backoff**: the rate-limit gate, not the semaphore, handles 429s.
 3. **Retry rounds degrade gracefully**: each round is more conservative, preventing infinite retry loops.
-4. **Observable**: `FetchPerfSummary` records initial/max concurrency, ramp rate, retry rounds — you can _see_ what happened.
+4. **Observable**: `FetchPerfSummary` records initial/max concurrency, ramp rate, retry rounds — making what happened fully visible.
 
 </div>
 
@@ -431,7 +431,7 @@ for round in 0..max_retry_rounds {
 
 ### 为什么发生
 
-我们假设配置的并发上限是 _安全的_。实际上，外部服务的容量因时间、服务器负载和部署状态而变化。从全油门起步就像在结冰的路面上猛踩加速踏板 — 你通过超过极限来发现极限。
+我们假设配置的并发上限是 _安全的_。实际上，外部服务的容量因时间、服务器负载和部署状态而变化。从全油门起步就像在结冰的路面上猛踩加速踏板 — 极限总是在被超过时才被发现。
 
 ### 优雅方案：用 `Semaphore` 实现自适应并发
 
@@ -531,7 +531,7 @@ for round in 0..max_retry_rounds {
 1. **发现容量**：不假设配置的上限总是可用的。
 2. **退避的单一机制**：限流闸门而不是信号量处理 429。
 3. **重试轮次优雅降级**：每轮更保守，防止无限重试循环。
-4. **可观测**：`FetchPerfSummary` 记录初始/最大并发、爬坡速率、重试轮次 — 你可以 _看到_ 发生了什么。
+4. **可观测**：`FetchPerfSummary` 记录初始/最大并发、爬坡速率、重试轮次 — 发生了什么一目了然。
 
 </div>
 
@@ -1030,7 +1030,7 @@ Ok(PipelineSummary {
 1. **Normal path is zero-overhead**: `drop(tx)` propagates naturally through the pipeline.
 2. **Emergency path is immediate**: one `store(true, Relaxed)`, all tasks stop.
 3. **No custom shutdown messages**: the channel primitives handle it.
-4. **Testable**: you can test normal shutdown by providing finite input, and emergency shutdown by injecting a 401 error.
+4. **Testable**: normal shutdown can be tested with finite input, emergency shutdown by injecting a 401 error.
 
 </div>
 
@@ -1127,7 +1127,7 @@ Ok(PipelineSummary {
 1. **正常路径零开销**：`drop(tx)` 自然地通过管道传播。
 2. **紧急路径即时**：一个 `store(true, Relaxed)`，所有 task 停止。
 3. **没有自定义关机消息**：channel 原语处理了它。
-4. **可测试**：你可以提供有限输入来测试正常关机，注入 401 错误来测试紧急停机。
+4. **可测试**：提供有限输入即可测试正常关机，注入 401 错误即可测试紧急停机。
 
 </div>
 
@@ -1154,7 +1154,7 @@ These principles emerged from fixing real bugs across three Rust projects. They'
 
 ### The Tool Selection Guide
 
-| When you need to... | Reach for |
+| Scenario | Reach for |
 |---------------------|-----------|
 | Share a read-heavy value across tasks | `Arc<RwLock<T>>` |
 | Share a simple flag/counter | `AtomicBool` / `AtomicUsize` |
@@ -1164,7 +1164,7 @@ These principles emerged from fixing real bugs across three Rust projects. They'
 | Stop all tasks on fatal error | `AtomicBool` abort flag |
 | Clean shutdown on normal completion | `drop(sender)` |
 
-Rust gives you a small, sharp set of concurrency primitives. The elegance is not in the tool — it's in knowing which combination to use for which problem. I hope these five bugs and their solutions help you build that intuition.
+Rust provides a small, sharp set of concurrency primitives. The elegance is not in the tool — it's in knowing which combination to use for which problem. I hope these five bugs and their solutions help build that intuition.
 
 ---
 
@@ -1193,7 +1193,7 @@ Rust gives you a small, sharp set of concurrency primitives. The elegance is not
 
 ### 工具选择指南
 
-| 当你需要... | 使用 |
+| 场景 | 使用 |
 |-------------|------|
 | 跨 task 共享读多写少的值 | `Arc<RwLock<T>>` |
 | 共享简单标志/计数器 | `AtomicBool` / `AtomicUsize` |
@@ -1203,7 +1203,7 @@ Rust gives you a small, sharp set of concurrency primitives. The elegance is not
 | 致命错误时停止所有 task | `AtomicBool` abort flag |
 | 正常完成时的优雅停机 | `drop(sender)` |
 
-Rust 给你了一套小而锋利的并发原语。优雅不在于工具 — 而在于知道哪种组合用于哪种问题。希望这五个 bug 和它们的解决方案能帮助你建立这种直觉。
+Rust 提供了一套小而锋利的并发原语。优雅不在于工具 — 而在于知道哪种组合用于哪种问题。希望这五个 bug 和它们的解决方案能帮助建立这种直觉。
 
 ---
 
