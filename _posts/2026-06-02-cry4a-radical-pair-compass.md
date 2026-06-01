@@ -57,7 +57,7 @@ H_\text{HF} = \sum_j \mathbf{S}_{e(j)} \cdot \mathbf{A}_j \cdot \mathbf{I}_j
 
 其中 \\(\mathbf{A}_j\\) 是超精细张量——描述第 j 个核与电子的耦合。张量不是球对称的：沿着某些方向的耦合远强于其他方向。**这是方向敏感性的物理根源。**
 
-{% include note.html content="**DFT超精细张量主值**（单位：Gauss，来源：Grüning et al. 2022 *JACS*）：N5 的各向异性最强（A<sub>xx</sub> 远大于 A<sub>yy</sub>, A<sub>zz</sub>），是罗盘方向参考轴的主要提供者。张量的非零非对角元提供了次级方向信息。" %}
+> **DFT超精细张量主值**（单位：Gauss，来源：Grüning et al. 2022 *JACS*）：N5 的各向异性最强（A<sub>xx</sub> 远大于 A<sub>yy</sub>, A<sub>zz</sub>），是罗盘方向参考轴的主要提供者。张量的非零非对角元提供了次级方向信息。
 
 | 核 | 自由基 | 自旋 I | A<sub>xx</sub> | A<sub>yy</sub> | A<sub>zz</sub> |
 |---|---|---|---|---|---|
