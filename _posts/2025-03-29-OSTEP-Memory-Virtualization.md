@@ -7,6 +7,7 @@ tags:
   - Operating System
   - Memory
   - Virtualization
+excerpt: "Notes on memory virtualization from OSTEP—address spaces, page tables, TLBs, and the mechanisms that make virtual memory work."
 ---
 
 <style>

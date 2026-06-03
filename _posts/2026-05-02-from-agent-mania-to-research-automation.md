@@ -10,6 +10,7 @@ tags:
   - research
   - agent
   - software-engineering
+excerpt: "Models are so powerful now that anyone can bring ideas to life. But what comes after agent mania? A reflection on data flywheels, distillation, and building AI that does research."
 ---
 
 <style>

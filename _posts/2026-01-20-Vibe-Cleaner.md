@@ -8,6 +8,7 @@ tags:
   - python
   - ai
   - software-engineering
+excerpt: "After vibe coding comes vibe cleaning—turning a messy but working AI-generated codebase back into something a human can understand, maintain, and extend."
 ---
 
 <style>
