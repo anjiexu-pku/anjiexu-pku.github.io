@@ -1,5 +1,9 @@
 <script src="{{ base_path }}/assets/js/main.min.js"></script>
 
+{% if page.collection == "posts" and page.toc != false %}
+  <script src="{{ base_path }}/assets/js/post-sidebar-toc.js"></script>
+{% endif %}
+
 <!-- Mermaid support -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
 <script>

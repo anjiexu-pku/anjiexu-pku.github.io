@@ -1,0 +1,17 @@
+{% unless page.toc == false %}
+  {% if page.collection == "posts" %}
+    {% assign toc_title_en = page.toc_title_en | default: page.toc_title | default: "Contents" %}
+    {% assign toc_title_zh = page.toc_title_zh | default: "本文目录" %}
+    <nav
+      class="post-sidebar-toc"
+      data-post-sidebar-toc
+      data-toc-selector="{{ page.toc_selector | default: 'h2' }}"
+      data-toc-title-en="{{ toc_title_en | escape }}"
+      data-toc-title-zh="{{ toc_title_zh | escape }}"
+      aria-label="{{ toc_title_en }}"
+      hidden>
+      <p class="post-sidebar-toc__title"><i class="fa fa-list" aria-hidden="true"></i> <span class="post-sidebar-toc__title-text">{{ toc_title_en }}</span></p>
+      <ul class="post-sidebar-toc__menu"></ul>
+    </nav>
+  {% endif %}
+{% endunless %}

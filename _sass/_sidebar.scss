@@ -56,6 +56,19 @@
   }
 }
 
+@media screen and (min-width: $sidebar-screen-min-width) {
+  .sidebar.sidebar--with-post-toc {
+    position: sticky;
+    top: calc(#{$masthead-height} + 1rem);
+    height: auto;
+    max-height: calc(100vh - #{$masthead-height} - 2rem);
+    padding-top: 0;
+    padding-bottom: 1.25rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 .sidebar__right {
   margin-bottom: 1em;
 
@@ -255,6 +268,105 @@
 
     &:hover {
       text-decoration: underline;
+    }
+  }
+}
+
+/*
+   Post table of contents in author sidebar
+   ========================================================================== */
+
+.post-sidebar-toc {
+  display: none;
+  clear: both;
+  margin: 1.4rem 0 0;
+  padding-top: 1rem;
+  font-family: $sans-serif-narrow;
+  text-indent: initial;
+  border-top: 1px solid $border-color;
+
+  @include breakpoint($large) {
+    display: block;
+    margin-top: 1.25rem;
+  }
+
+  a {
+    color: mix(#000, $gray, 8%);
+    text-decoration: none;
+
+    &:hover {
+      color: #000;
+      text-decoration: underline;
+    }
+  }
+}
+
+.post-sidebar-toc[hidden] {
+  display: none !important;
+}
+
+.post-sidebar-toc .post-sidebar-toc__title {
+  margin: 0 0 0.65rem;
+  color: mix(#000, $gray, 20%);
+  font-size: $type-size-6;
+  font-weight: bold;
+
+  i {
+    margin-right: 0.35em;
+  }
+}
+
+.post-sidebar-toc__menu {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  a {
+    display: block;
+    margin-left: -0.55rem;
+    padding: 0.08rem 0.25rem 0.08rem 0.45rem;
+    border-left: 2px solid transparent;
+    border-radius: 0 $border-radius $border-radius 0;
+  }
+
+  li {
+    margin: 0 0 0.4rem;
+    font-size: $type-size-7;
+    line-height: 1.4;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  li.is-active > a {
+    color: #000;
+    font-weight: bold;
+    background: mix(#fff, $primary-color, 92%);
+    border-left-color: $primary-color;
+  }
+
+  ul {
+    margin: 0.25rem 0 0.45rem 0.75rem;
+    padding: 0;
+    list-style: none;
+  }
+}
+
+.page__content > .post-sidebar-toc {
+  margin: 1.75em 0 2.25em;
+  padding: 1em 1.15em 0.9em;
+  background: mix(#fff, $lighter-gray, 45%);
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+
+  .post-sidebar-toc__menu {
+    @include breakpoint($medium) {
+      columns: 2 16em;
+      column-gap: 1.4em;
+    }
+
+    li {
+      break-inside: avoid;
+      font-size: $type-size-6;
     }
   }
 }
