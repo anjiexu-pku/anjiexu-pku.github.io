@@ -37,6 +37,13 @@
     }
   }
 
+  .notice__title {
+    margin: 0 0 0.75em;
+    font-size: 1em;
+    font-weight: bold;
+    color: mix(#000, $notice-color, 20%);
+  }
+
   h4 + p {
     /* remove space above paragraphs that appear directly after notice headline*/
     margin-top: 0;
