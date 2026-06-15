@@ -865,6 +865,22 @@ Some directions deserve caution:
 | Relying on checker/cache outlier scores | Without an explainable kernel mechanism, it should not be the final route |
 | Looking only at local CUDA timing | Remote multi-platform results are the actual competition constraint |
 
+## Code Snapshot
+
+I have also put the stable non-outlier source snapshot in a small GitHub repository:
+
+<div class="kg-challenge-card" markdown="1">
+  <div>
+    <p class="kg-challenge-label">Stable source repository</p>
+    <p class="kg-challenge-desc"><code>sub_64c96b412ccc</code>, submitted on June 13, 2026 Beijing time, passed 7/7 with an average speedup of about <code>10.21x</code>.</p>
+  </div>
+  <a class="kg-challenge-button" href="https://github.com/TankTechnology/kernelgen-challenge-8-stable-10x" target="_blank" rel="noopener">View on GitHub</a>
+</div>
+
+This is not the later 200x-style MetaX outlier. I am sharing it mainly as a record of the optimization ideas in this post: backend-isolated routes, `block_size=8` address simplification, and a conservative Ascend path that puts correctness ahead of a more aggressive Triton finalizer.
+
+It should be read with some humility. The code was tuned for the competition environment and the official test surface at that time. In particular, it assumes the official `block_size=8` setting, the block-table regularity observed in the benchmark data, and an output cache surface compatible with the platform checker. A small local review found that more general inputs, such as non-contiguous physical block tables, non-zero initial `kv_cache`, or non-official `block_size` values, can break byte-level equivalence with the reference implementation. The snapshot is therefore a useful competition artifact, not a general-purpose KV cache compression library.
+
 <div class="notice--warning" markdown="1">
 <p class="notice__title">About Outlier Scores</p>
 
@@ -1648,6 +1664,22 @@ def _metax_gather(...):
 | 在 Ascend 上激进融合 quant/RoPE | 这部分最容易触发 byte mismatch |
 | 依赖 checker/cache 异常高分 | 缺少可解释的 kernel 机制，不能当成最终路线 |
 | 只看本地 CUDA timing | 远程多平台结果才是比赛里的真实约束 |
+
+## 代码快照
+
+我也把这次复盘对应的、非异常高分路线的稳定源码快照整理成了一个小的 GitHub 仓库：
+
+<div class="kg-challenge-card" markdown="1">
+  <div>
+    <p class="kg-challenge-label">稳定源码仓库</p>
+    <p class="kg-challenge-desc"><code>sub_64c96b412ccc</code>，2026 年 6 月 13 日北京时间提交，7/7 通过，平均加速比约 <code>10.21x</code>。</p>
+  </div>
+  <a class="kg-challenge-button" href="https://github.com/TankTechnology/kernelgen-challenge-8-stable-10x" target="_blank" rel="noopener">查看 GitHub 仓库</a>
+</div>
+
+这不是后来 MetaX 上出现过的 200x 异常样本。我把它放出来，主要是作为这篇文章里几条思路的具体记录：后端隔离、利用 `block_size=8` 减少寻址、以及 Ascend 上为了正确性保留更保守的路线。
+
+也需要很谨慎地读它。这份代码是为当时的比赛环境和官方测试面调出来的，隐含了官方 `block_size=8`、benchmark 中观察到的 block table 规律，以及平台 checker 下可接受的输出 cache 条件。一次很小的本地 review 发现，如果换成更一般的输入，比如非连续 physical block table、初始值非零的 `kv_cache`，或者非官方 `block_size`，它可能不再和 reference 保持字节级一致。所以它更适合当作比赛复盘材料，并不适合作为可以直接拿去复用的通用 KV cache 压缩库。
 
 <div class="notice--warning" markdown="1">
 <p class="notice__title">关于异常高分</p>
