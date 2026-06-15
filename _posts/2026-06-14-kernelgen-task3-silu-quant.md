@@ -399,6 +399,20 @@ The useful way to read the optimization history is as a sequence of bottlenecks 
 
 The exact numbers come from submission records and our review notes. Their role here is to mark which cost each change removed, so the narrative stays focused on technical decisions.
 
+## Code Repository
+
+I have also put the stable submitted source in a small GitHub repository:
+
+<div class="kg-challenge-card" markdown="1">
+  <div>
+    <p class="kg-challenge-label">Stable source repository</p>
+    <p class="kg-challenge-desc"><code>sub_e8229df252bc</code>, exported from commit <code>b13093a</code>, passed 7/7 with an average speedup of about <code>10.46x</code>.</p>
+  </div>
+  <a class="kg-challenge-button" href="https://github.com/TankTechnology/kernelgen-challenge-9-task3-silu-quant" target="_blank" rel="noopener">View on GitHub</a>
+</div>
+
+The repository is meant as a reproducible competition snapshot. It includes the submitted `solution.py`, local reference/tests, and the submission notes used in this write-up. It should be read with the same caution as the discussion above: the code is specialized for the KernelGen Challenge 9 interface, official shape set, and the accelerator backends available during that run.
+
 ## Lessons Worth Keeping
 
 The main lesson is that this operator looks like activation math, but behaves like a quantization and memory-layout problem.
@@ -702,6 +716,20 @@ K-group buffer kernel:
 | 多后端对同一 kernel 的响应不同 | 数学语义共用，platform dispatch 拆开 | 稳定 7/7 提交约 `10.46x`，线下 final 第一名 |
 
 这些数字来自提交记录和复盘笔记。它们在文中的作用，是标明每个改动对应消掉了哪一类成本，让叙事围绕技术判断展开。
+
+## 代码仓库
+
+我也把这次稳定提交对应的源码整理成了一个小的 GitHub 仓库：
+
+<div class="kg-challenge-card" markdown="1">
+  <div>
+    <p class="kg-challenge-label">稳定源码仓库</p>
+    <p class="kg-challenge-desc"><code>sub_e8229df252bc</code>，从提交 <code>b13093a</code> 导出，7/7 通过，平均加速比约 <code>10.46x</code>。</p>
+  </div>
+  <a class="kg-challenge-button" href="https://github.com/TankTechnology/kernelgen-challenge-9-task3-silu-quant" target="_blank" rel="noopener">查看 GitHub 仓库</a>
+</div>
+
+这个仓库更适合作为可追溯的比赛快照来读。里面包含当时提交的 `solution.py`、本地 reference/tests，以及本文所依据的提交笔记。它仍然要带着一点谨慎来看：代码针对的是 KernelGen Challenge 9 的接口、官方 shape 集合，以及当时线下赛可用的几类加速卡。
 
 ## 值得保留的经验
 
