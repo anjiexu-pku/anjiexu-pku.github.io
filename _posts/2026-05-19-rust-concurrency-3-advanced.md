@@ -33,11 +33,11 @@ excerpt: "Rust concurrency notes part 3: five real-world concurrency bugs and th
 </style>
 
 <div class="lang-switch">
-  <a class="active" href="#zh" onclick="switchLang('zh');return false">中文</a>|
-  <a href="#en" onclick="switchLang('en');return false">English</a>
+  <a class="active" href="#en" onclick="switchLang('en');return false">English</a>|
+  <a href="#zh" onclick="switchLang('zh');return false">中文</a>
 </div>
 
-<div id="lang-zh" class="lang-content" markdown="1">
+<div id="lang-zh" class="lang-content" style="display:none" markdown="1">
 
 # Rust 并发笔记 (3)：五个真实 Bug 的优雅解法
 
@@ -504,7 +504,7 @@ Rust 给的并发原语不多，但够锋利。优雅不在于工具本身——
 
 </div>
 
-<div id="lang-en" class="lang-content" style="display:none" markdown="1">
+<div id="lang-en" class="lang-content" markdown="1">
 
 # Rust Concurrency Notes (3): Elegant Fixes for Five Real Bugs
 
@@ -980,7 +980,7 @@ function switchLang(lang) {
   document.querySelector('.lang-switch a[href="#' + lang + '"]').classList.add('active');
   history.replaceState(null, '', '#' + lang);
 }
-if (location.hash === '#en') {
-  switchLang('en');
+if (location.hash === '#zh') {
+  switchLang('zh');
 }
 </script>

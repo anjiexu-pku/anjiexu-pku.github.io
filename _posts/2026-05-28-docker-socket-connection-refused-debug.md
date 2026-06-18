@@ -34,11 +34,11 @@ excerpt: "docker ps returned ECONNREFUSED but the socket file existed and the da
 </style>
 
 <div class="lang-switch">
-  <a class="active" href="#zh" onclick="switchLang('zh');return false">中文</a>|
-  <a href="#en" onclick="switchLang('en');return false">English</a>
+  <a class="active" href="#en" onclick="switchLang('en');return false">English</a>|
+  <a href="#zh" onclick="switchLang('zh');return false">中文</a>
 </div>
 
-<div id="lang-zh" class="lang-content" markdown="1">
+<div id="lang-zh" class="lang-content" style="display:none" markdown="1">
 
 某天执行 `docker ps`，返回了这个经典错误：
 
@@ -155,7 +155,7 @@ sudo snap start docker.dockerd
 
 </div>
 
-<div id="lang-en" class="lang-content" style="display:none" markdown="1">
+<div id="lang-en" class="lang-content" markdown="1">
 
 One day, running `docker ps` returned the classic error:
 
@@ -281,7 +281,7 @@ function switchLang(lang) {
   document.querySelector('.lang-switch a[href="#' + lang + '"]').classList.add('active');
   history.replaceState(null, '', '#' + lang);
 }
-if (location.hash === '#en') {
-  switchLang('en');
+if (location.hash === '#zh') {
+  switchLang('zh');
 }
 </script>

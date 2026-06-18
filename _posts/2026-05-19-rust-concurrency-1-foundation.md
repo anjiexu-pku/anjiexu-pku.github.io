@@ -32,11 +32,11 @@ excerpt: "Rust concurrency notes part 1: how ownership, type system, and error h
 </style>
 
 <div class="lang-switch">
-  <a class="active" href="#zh" onclick="switchLang('zh');return false">中文</a>|
-  <a href="#en" onclick="switchLang('en');return false">English</a>
+  <a class="active" href="#en" onclick="switchLang('en');return false">English</a>|
+  <a href="#zh" onclick="switchLang('zh');return false">中文</a>
 </div>
 
-<div id="lang-zh" class="lang-content" markdown="1">
+<div id="lang-zh" class="lang-content" style="display:none" markdown="1">
 
 # Rust 并发笔记 (1)：所有权、类型与错误
 
@@ -304,7 +304,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 </div>
 
-<div id="lang-en" class="lang-content" style="display:none" markdown="1">
+<div id="lang-en" class="lang-content" markdown="1">
 
 # Rust Concurrency Notes (1): Ownership, Types, and Errors
 
@@ -582,7 +582,7 @@ function switchLang(lang) {
   document.querySelector('.lang-switch a[href="#' + lang + '"]').classList.add('active');
   history.replaceState(null, '', '#' + lang);
 }
-if (location.hash === '#en') {
-  switchLang('en');
+if (location.hash === '#zh') {
+  switchLang('zh');
 }
 </script>

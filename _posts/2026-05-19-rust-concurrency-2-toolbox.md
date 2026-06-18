@@ -32,11 +32,11 @@ excerpt: "Rust concurrency notes part 2: threads, locks, channels, and concurren
 </style>
 
 <div class="lang-switch">
-  <a class="active" href="#zh" onclick="switchLang('zh');return false">中文</a>|
-  <a href="#en" onclick="switchLang('en');return false">English</a>
+  <a class="active" href="#en" onclick="switchLang('en');return false">English</a>|
+  <a href="#zh" onclick="switchLang('zh');return false">中文</a>
 </div>
 
-<div id="lang-zh" class="lang-content" markdown="1">
+<div id="lang-zh" class="lang-content" style="display:none" markdown="1">
 
 # Rust 并发笔记 (2)：线程、锁、Channel 与并发控制
 
@@ -444,7 +444,7 @@ async fn fetch_with_retry(
 
 </div>
 
-<div id="lang-en" class="lang-content" style="display:none" markdown="1">
+<div id="lang-en" class="lang-content" markdown="1">
 
 # Rust Concurrency Notes (2): Threads, Locks, Channels, and Concurrency Control
 
@@ -862,7 +862,7 @@ function switchLang(lang) {
   document.querySelector('.lang-switch a[href="#' + lang + '"]').classList.add('active');
   history.replaceState(null, '', '#' + lang);
 }
-if (location.hash === '#en') {
-  switchLang('en');
+if (location.hash === '#zh') {
+  switchLang('zh');
 }
 </script>
