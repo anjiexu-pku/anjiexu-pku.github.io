@@ -32,8 +32,8 @@ excerpt: "Rust concurrency notes part 1: how ownership, type system, and error h
 </style>
 
 <div class="lang-switch">
-  <a class="active" href="#zh">中文</a>|
-  <a href="#en">English (TODO)</a>
+  <a class="active" href="#zh" onclick="switchLang('zh');return false">中文</a>|
+  <a href="#en" onclick="switchLang('en');return false">English</a>
 </div>
 
 <div id="lang-zh" class="lang-content" markdown="1">
@@ -164,7 +164,7 @@ let h2 = Arc::clone(&config);           // 同样，不拷贝数据
 异步 Rust 里大多数共享可变状态都用这个组合。这是 ChatPD 里的一个真实例子——全局限流闸门：
 
 ```rust
-use std::sync::RwLock;
+use tokio::sync::RwLock;
 use std::time::Instant;
 use once_cell::sync::Lazy;
 
@@ -303,3 +303,286 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 *代码示例从 [ChatPD](https://github.com/anjiexu-pku)、[asterinas](https://github.com/asterinas/asterinas) 和 [mcpr](https://github.com/TankTechnology) 的生产 Rust 代码简化而来。*
 
 </div>
+
+<div id="lang-en" class="lang-content" style="display:none" markdown="1">
+
+# Rust Concurrency Notes (1): Ownership, Types, and Errors
+
+Over the past few months, while building a project called ChatPD to process arXiv papers in bulk with LLMs, I ran into quite a few Rust concurrency pitfalls. Looking back, Rust's concurrency model rests on several concepts that do not look concurrency-specific at first glance: ownership, `Send`/`Sync`, `Arc`, and `Result`. This note organizes those foundations.
+
+---
+
+## 1. Ownership and Borrowing
+
+Rust eliminates data races at compile time. This is not a runtime check, nor is it a feature bolted onto the type system. It is a direct consequence of ownership. The rules are:
+
+```rust
+// Rule 1: every value has exactly one owner at any moment.
+let s1 = String::from("hello");
+let s2 = s1;           // s1 has been moved and can no longer be used
+// println!("{}", s1); // compile error
+
+// Rule 2: either one mutable reference, or many immutable references.
+let mut v = vec![1, 2, 3];
+let r1 = &v;           // shared reference
+let r2 = &v;           // multiple shared references are allowed
+// let r3 = &mut v;    // cannot have &mut while & references are in use
+
+// Rule 3: references must always be valid; no dangling pointers.
+fn dangle() -> &String {
+    let s = String::from("hello");
+    &s  // s is dropped when the function returns
+}
+```
+
+### Connection to Concurrency
+
+In most languages, if two threads access the same data at the same time and at least one of them writes, you have a data race. The language will usually not stop you. Rust's borrow checker catches this at compile time:
+
+```rust
+use std::thread;
+
+let mut data = vec![1, 2, 3];
+
+thread::spawn(move || {
+    data.push(4);  // data is moved into this thread
+});
+
+// println!("{:?}", data);  // data no longer belongs here
+```
+
+The `move` keyword transfers ownership into the closure. After that, the original thread has no access to `data`. **No shared mutable state, no data race.** This guarantee is compile-time, not runtime.
+
+---
+
+## 2. `Send` and `Sync`
+
+These are marker traits. The compiler automatically derives them for most types. They answer two questions: can this value be moved to another thread? Can references to this value be shared across threads?
+
+### `Send`: Transferring Ownership Across Threads
+
+If values of a type can be safely moved to another thread, the type is `Send`. Most types are:
+
+```rust
+fn is_send<T: Send>() {}
+
+is_send::<i32>();         // ok
+is_send::<String>();      // ok
+is_send::<Mutex<i32>>();  // ok
+```
+
+The classic counterexample is `Rc<T>`, whose reference count uses non-atomic operations:
+
+```rust
+use std::rc::Rc;
+// is_send::<Rc<i32>>();    // Rc is not Send
+```
+
+`Arc<T>` is the `Send` version. The "A" means *atomic*:
+
+```rust
+use std::sync::Arc;
+// is_send::<Arc<i32>>();     // ok, assuming T: Send + Sync
+```
+
+### `Sync`: Sharing References Across Threads
+
+If references to a type (`&T`) can be safely shared across threads, the type is `Sync`:
+
+```rust
+fn is_sync<T: Sync>() {}
+
+is_sync::<i32>();         // ok
+is_sync::<Mutex<i32>>();  // ok: Mutex provides safe interior mutability
+// is_sync::<Rc<i32>>();  // Rc is neither Send nor Sync
+```
+
+### What to Do When `tokio::spawn` Complains About `Send`
+
+The most common compiler error looks like this:
+
+```
+error[E0277]: `Rc<i32>` cannot be sent between threads safely
+```
+
+The usual causes are mechanical: `Rc<T>` should become `Arc<T>`, `RefCell<T>` should become `Mutex<T>` or `RwLock<T>`, a raw pointer is hidden deep inside a struct, or a dependency introduced a non-`Send` type. Once you identify which type is responsible, the fix is usually straightforward.
+
+---
+
+## 3. `Arc<T>`: The Cost of Shared Ownership
+
+`Arc<T>` appears everywhere in concurrent Rust. In ChatPD's pipeline, it carries configuration, counters, abort flags, and semaphores across dozens of async tasks.
+
+### `Arc::clone` Is Just an Atomic Increment
+
+```rust
+use std::sync::Arc;
+
+let config = Arc::new(vec![1, 2, 3]);  // one heap allocation
+let h1 = Arc::clone(&config);          // atomically increment the refcount
+let h2 = Arc::clone(&config);          // same, without copying the data
+
+// all three Arc values point to the same heap allocation
+```
+
+`clone` is cheap, but not free. Atomic operations can burn CPU cycles through cache-line bouncing across cores. For counters in hot loops, a direct `AtomicUsize` is usually better.
+
+### `Arc<RwLock<T>>`
+
+Most shared mutable state in async Rust uses this combination. Here is a real example from ChatPD: a global rate-limit gate.
+
+```rust
+use tokio::sync::RwLock;
+use std::time::Instant;
+use once_cell::sync::Lazy;
+
+// Global rate-limit gate. Every request reads before sending; only 429s write.
+static RATE_LIMITED_UNTIL: Lazy<Arc<RwLock<Option<Instant>>>> =
+    Lazy::new(|| Arc::new(RwLock::new(None)));
+
+// Read path: shared access, usually uncontended
+let until = *RATE_LIMITED_UNTIL.read().await;
+
+// Write path: exclusive, but rare
+let mut guard = RATE_LIMITED_UNTIL.write().await;
+*guard = Some(Instant::now() + Duration::from_secs(60));
+```
+
+This uses `RwLock` instead of `Mutex` because reads vastly outnumber writes. The lock type should follow the access pattern, not habit.
+
+### `Arc` Is Not Always Necessary
+
+The DB writer in the pipeline is used by exactly one task:
+
+```rust
+pub async fn run_db_writer(
+    mut rx: mpsc::Receiver<WriteRecord>,
+    db_path: String,
+) -> StagePerfSummary {
+    let conn = rusqlite::Connection::open(&db_path)?;
+    // conn is exclusively owned by this task: no Arc, no Mutex, no contention
+    while let Some(record) = rx.recv().await { /* write */ }
+}
+```
+
+When there is only one owner, pass ownership directly through a channel or a function argument. You do not need `Arc`.
+
+---
+
+## 4. `Result<T, E>`: Errors Do Not Disappear by Themselves
+
+Error handling matters even more in concurrent code. A panicking task can take down the process. A silently swallowed error can quietly corrupt data. Rust's `Result` makes errors explicit, and `?` keeps propagation concise.
+
+### Basic Usage
+
+```rust
+fn read_config(path: &str) -> Result<String, std::io::Error> {
+    let contents = std::fs::read_to_string(path)?;  // return Err on failure
+    Ok(contents)
+}
+```
+
+### Errors in Concurrent Code
+
+When many tasks run at once, how should one task's failure notify the others? ChatPD has a case where the LLM API key runs out of quota. We broadcast this fatal error with an `AtomicBool`:
+
+```rust
+use std::sync::atomic::{AtomicBool, Ordering};
+
+let abort_flag = Arc::new(AtomicBool::new(false));
+
+// In an LLM worker, after detecting quota exhaustion:
+if err_str.contains("401") || err_str.contains("quota") {
+    eprintln!("fatal: API quota exhausted, aborting pipeline");
+    abort_flag.store(true, Ordering::Relaxed);
+    return;
+}
+
+// Other workers check before starting each item:
+if abort_flag.load(Ordering::Relaxed) {
+    return;  // exit quietly without producing error records
+}
+```
+
+This naturally divides errors into three categories:
+
+| Category | Example | Handling |
+|----------|---------|----------|
+| Transient | 429, timeout | Backoff and retry |
+| Terminal | 404, parse failure | Write an error record and continue |
+| Fatal | 401, quota exhausted | Set the abort flag and stop everything |
+
+### `anyhow` vs `thiserror`
+
+Use `anyhow::Result<T>` in application code: it wraps arbitrary error types and lets you attach context. Use `thiserror` in library code: callers can match on specific error variants. The difference is whether the caller needs to distinguish error types programmatically.
+
+---
+
+## 5. A Small Exercise
+
+Put the four concepts together: create threads, share state with `Arc<Mutex<T>>`, and handle errors with `Result`.
+
+```rust
+use std::sync::{Arc, Mutex};
+use std::thread;
+
+struct SharedCounter {
+    count: Mutex<u64>,
+    name: String,
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let counter = Arc::new(SharedCounter {
+        count: Mutex::new(0),
+        name: "requests".to_string(),
+    });
+
+    let mut handles = vec![];
+    for i in 0..4 {
+        let counter = Arc::clone(&counter);
+        handles.push(thread::spawn(move || {
+            for _ in 0..100 {
+                let mut count = counter.count.lock().unwrap();
+                *count += 1;
+            }
+            println!("thread {} done", i);
+        }));
+    }
+
+    for h in handles { h.join().unwrap(); }
+
+    let final_count = counter.count.lock().unwrap();
+    println!("{}: {} total", counter.name, *final_count);
+    Ok(())
+}
+```
+
+Those five lines do the real work:
+
+1. `Arc::new(...)`: allocate once on the heap and share with every thread.
+2. `Arc::clone(&counter)`: atomically increment the refcount for each thread.
+3. `move ||`: transfer ownership of the cloned `Arc` into the closure.
+4. `.lock().unwrap()`: acquire the mutex, increment the value, and release it when the guard leaves scope.
+5. `.join().unwrap()`: wait for every thread to finish and propagate panics.
+
+---
+
+The second note covers the concurrency toolbox: `Mutex`/`RwLock`/`Atomic*`, channels, three concurrency-control patterns, and error-propagation strategies. The third note walks through five real production bugs from ChatPD: 429 cascade storms, cold-start concurrency, DB lock contention, fatal-error broadcast, and graceful shutdown.
+
+*Code examples are simplified from production Rust code in [ChatPD](https://github.com/anjiexu-pku), [asterinas](https://github.com/asterinas/asterinas), and [mcpr](https://github.com/TankTechnology).*
+
+</div>
+
+<script>
+function switchLang(lang) {
+  document.getElementById('lang-zh').style.display = lang === 'zh' ? '' : 'none';
+  document.getElementById('lang-en').style.display = lang === 'en' ? '' : 'none';
+  const links = document.querySelectorAll('.lang-switch a');
+  links.forEach(a => a.classList.remove('active'));
+  document.querySelector('.lang-switch a[href="#' + lang + '"]').classList.add('active');
+  history.replaceState(null, '', '#' + lang);
+}
+if (location.hash === '#en') {
+  switchLang('en');
+}
+</script>

@@ -32,8 +32,8 @@ excerpt: "Rust concurrency notes part 2: threads, locks, channels, and concurren
 </style>
 
 <div class="lang-switch">
-  <a class="active" href="#zh">中文</a>|
-  <a href="#en">English (TODO)</a>
+  <a class="active" href="#zh" onclick="switchLang('zh');return false">中文</a>|
+  <a href="#en" onclick="switchLang('en');return false">English</a>
 </div>
 
 <div id="lang-zh" class="lang-content" markdown="1">
@@ -129,7 +129,7 @@ ChatPD 最初用 `Arc<Mutex<Connection>>` 做数据库访问。低并发时没�
 多个读同时持有锁，写者独占。读多写少时比 `Mutex` 好得多。
 
 ```rust
-use std::sync::RwLock;
+use tokio::sync::RwLock;
 use std::time::Instant;
 use once_cell::sync::Lazy;
 
@@ -443,3 +443,426 @@ async fn fetch_with_retry(
 *代码示例从 [ChatPD](https://github.com/anjiexu-pku)、[asterinas](https://github.com/asterinas/asterinas) 和 [mcpr](https://github.com/TankTechnology) 的生产 Rust 代码简化而来。*
 
 </div>
+
+<div id="lang-en" class="lang-content" style="display:none" markdown="1">
+
+# Rust Concurrency Notes (2): Threads, Locks, Channels, and Concurrency Control
+
+[Part 1](/tech/rust-concurrency-1-foundation/) covered ownership, `Send`/`Sync`, `Arc`, and `Result`: the foundation of concurrency is not concurrency itself, but the type system. This post fills in the toolbox: the difference between threads and async tasks, three primitives for shared state, channels for message passing, and several patterns for controlling concurrency. Each pattern is tied back to where it appears in ChatPD or asterinas.
+
+---
+
+## 1. Threads and Async
+
+Rust gives you two concurrency models. Production code often uses both. The real question is which one fits which situation.
+
+### `std::thread`: OS Threads
+
+```rust
+use std::thread;
+
+let handle = thread::spawn(|| {
+    // Runs on a real OS thread.
+    // Good for CPU-heavy work, C FFI, and blocking syscalls.
+    42
+});
+let result = handle.join().unwrap();
+```
+
+In the asterinas kernel, OS threads underpin `WaitQueue` and spinlock synchronization. There is no async runtime inside the kernel; threads are the only option.
+
+For CPU-heavy work in userspace, `rayon` provides parallel iterators so you do not have to manually `spawn` and `join`.
+
+### `tokio::spawn`: Async Tasks
+
+```rust
+let handle = tokio::spawn(async {
+    // Runs on tokio's worker threads.
+    // Good for HTTP requests, DB queries, and file I/O via tokio::fs.
+    42
+});
+let result = handle.await.unwrap();  // .await, not .join()
+```
+
+In ChatPD's pipeline, 200 concurrent LLM API calls are all handled with `tokio::spawn`. Opening 200 OS threads for network I/O would be wasteful: each thread has a default stack, often around 8MB, plus scheduler overhead. An async task is a lightweight state machine managed by the tokio runtime.
+
+### A Rough Decision Rule
+
+```
+CPU-heavy or blocking?
+  -> std::thread, rayon, or tokio::task::spawn_blocking
+I/O-heavy with high concurrency?
+  -> tokio::spawn
+Either would work?
+  -> in an async codebase, use tokio for consistency
+```
+
+### Calling Blocking Functions from Async Code
+
+`spawn_blocking` moves blocking work out of the async runtime's worker pool:
+
+```rust
+let data = tokio::task::spawn_blocking(|| {
+    std::fs::read_to_string("huge_file.json").unwrap()
+}).await.unwrap();
+```
+
+Without this, a blocking call can starve other tasks on the same worker thread.
+
+---
+
+## 2. Shared State: `Mutex`, `RwLock`, and `Atomic*`
+
+When multiple tasks need access to the same data, these three primitives cover most cases. The key is to choose based on the access pattern.
+
+### `Mutex<T>`: Mutual Exclusion
+
+Every access, whether read or write, acquires the lock exclusively. Use it when reads and writes are similarly frequent, or when the critical section is short.
+
+```rust
+use std::sync::{Arc, Mutex};
+
+let counter = Arc::new(Mutex::new(0u64));
+let mut guard = counter.lock().unwrap();
+*guard += 1;
+// the guard releases the lock when it leaves scope
+```
+
+In async code, if the guard must be held across `.await`, use `tokio::sync::Mutex`. In synchronous code, `std::sync::Mutex` is faster.
+
+ChatPD initially used `Arc<Mutex<Connection>>` for database access. It was fine at low concurrency, but became a bottleneck as the pipeline scaled: every query fought for the same lock. We later replaced it with a single-owner writer, which Part 3 explains.
+
+### `RwLock<T>`: Read-Write Lock
+
+Many readers can hold the lock at the same time, while writers require exclusive access. It works much better than `Mutex` when reads greatly outnumber writes.
+
+```rust
+use tokio::sync::RwLock;
+use std::time::Instant;
+use once_cell::sync::Lazy;
+
+// ChatPD global rate-limit gate:
+// every request reads it; only 429 responses write it.
+static RATE_LIMITED_UNTIL: Lazy<Arc<RwLock<Option<Instant>>>> =
+    Lazy::new(|| Arc::new(RwLock::new(None)));
+
+let until = *RATE_LIMITED_UNTIL.read().await;     // read: shared, usually no contention
+let mut guard = RATE_LIMITED_UNTIL.write().await; // write: exclusive, but rare
+*guard = Some(Instant::now() + Duration::from_secs(60));
+```
+
+Selection guide:
+
+| Access pattern | Use |
+|----------------|-----|
+| Reads roughly equal writes | `Mutex` |
+| Reads much more frequent than writes | `RwLock` |
+| Single boolean or integer | `AtomicBool` / `AtomicUsize` |
+| Struct with multiple fields | `Mutex` for simplicity, or split into `Atomic*` for performance |
+
+### `Atomic*`: Lock-Free Primitives
+
+For simple values such as booleans, counters, and flags, atomic operations need no lock at all:
+
+```rust
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
+// abort flag: one writer, many readers
+let abort = Arc::new(AtomicBool::new(false));
+abort.store(true, Ordering::Relaxed);        // write
+if abort.load(Ordering::Relaxed) { return; } // read
+
+// counter: many increments, one collector
+let counter = Arc::new(AtomicUsize::new(0));
+counter.fetch_add(1, Ordering::Relaxed);
+```
+
+When the value has no ordering dependency with other state, `Relaxed` is both sufficient and fastest. asterinas has a good example in `klog.rs`: `console_level` is stored in an `AtomicU8`, and `swap()` atomically "sets the new value and returns the old one" without a full lock.
+
+---
+
+## 3. Message Passing: Channels
+
+Sometimes not sharing is simpler than sharing. Channels let tasks communicate by sending values. Each task owns its own data, and ownership moves through the channel.
+
+### `mpsc::channel`: Multiple Producers, Single Consumer
+
+This is the workhorse: many senders, one receiver. ChatPD's four-stage pipeline is connected by `mpsc` channels:
+
+```rust
+use tokio::sync::mpsc;
+
+let (tx, mut rx) = mpsc::channel::<WorkItem>(200);  // buffer of 200 items
+
+// Producer: clone tx for each task
+let tx1 = tx.clone();
+tokio::spawn(async move { tx1.send(item).await.unwrap(); });
+
+// Important: drop the original tx, or the receiver will never exit.
+drop(tx);
+
+// Consumer
+while let Some(item) = rx.recv().await {
+    process(item).await;
+}
+// After every sender is dropped, the loop exits automatically.
+```
+
+Three properties make this ideal for pipelines:
+
+1. **No locks.** The consumer exclusively owns the data it receives.
+2. **Backpressure.** If the buffer is full, `send().await` blocks the producer, giving natural flow control.
+3. **Natural shutdown.** Drop all senders and the receiver exits automatically. No extra shutdown signal is needed.
+
+### ChatPD's Four-Stage Pipeline
+
+```
+[Fetcher]  --ch1-->  [Builder]  --ch2-->  [LLM Caller]  --ch3-->  [DB Writer]
+```
+
+```rust
+let (paper_tx, paper_rx) = mpsc::channel::<Paper>(cap);
+let (req_tx, req_rx)     = mpsc::channel::<PaperRequest>(cap);
+let (write_tx, write_rx) = mpsc::channel::<WriteRecord>(cap * 2 + 100);
+
+let fetcher  = tokio::spawn(run_fetcher(input, paper_tx, write_tx.clone(), ...));
+let builder  = tokio::spawn(run_builder(paper_rx, req_tx, write_tx.clone(), ...));
+let llm      = tokio::spawn(run_llm_caller(req_rx, write_tx.clone(), ...));
+drop(write_tx);  // no new data can be sent by the main owner
+let db_writer = tokio::spawn(run_db_writer(write_rx, ...));
+```
+
+Each stage runs independently and has its own concurrency level. The channels carry both data and flow control. If downstream slows down, upstream naturally blocks on `send()`.
+
+### Other Channel Types
+
+`oneshot::channel()` is single-value and one-time. Think of it as a `Future` that resolves once. It fits "do this, then tell me the result."
+
+`broadcast::channel()` has one sender and many receivers. Each receiver gets a copy of every value. It fits events that many tasks need to observe.
+
+---
+
+## 4. Concurrency Control: Three Patterns
+
+Different scenarios need different concurrency-control strategies.
+
+### Pattern A: `buffer_unordered(n)` for a Fixed Window
+
+This is the simplest option when the concurrency level is known and fixed:
+
+```rust
+use futures::StreamExt;
+
+futures::stream::iter(items)
+    .map(|item| async move { process(item).await })
+    .buffer_unordered(48)   // at most 48 running at once
+    .for_each(|result| async { /* handle result */ })
+    .await;
+```
+
+ChatPD uses this in the builder stage, at 48-way concurrency, and in the LLM caller stage, at 200-way concurrency. It is simple and does not require runtime adjustment.
+
+### Pattern B: `Semaphore` for Adaptive Concurrency
+
+When an external service's capacity is uncertain, it is better to start conservatively and increase after successful calls:
+
+```rust
+use tokio::sync::Semaphore;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+let sem = Arc::new(Semaphore::new(4));   // start at 4
+let max = 32;
+let cur = Arc::new(AtomicUsize::new(4));
+let success = Arc::new(AtomicUsize::new(0));
+
+for item in items {
+    let permit = sem.clone().acquire_owned().await.unwrap();
+    tokio::spawn(async move {
+        if process(item).await.is_ok() {
+            let n = success.fetch_add(1, Ordering::Relaxed) + 1;
+            if n % 24 == 0 {  // every 24 successes, open one more slot
+                let c = cur.load(Ordering::Relaxed);
+                if c < max {
+                    cur.fetch_add(1, Ordering::Relaxed);
+                    sem.add_permits(1);
+                }
+            }
+        }
+        drop(permit);
+    });
+}
+```
+
+ChatPD's fetcher uses this pattern: start at 4-way concurrency, then gradually climb to 32 after enough successes. This *discovers* the external service's real capacity instead of assuming the configured maximum is always safe.
+
+The semaphore only increases; it does not decrease. Rate-limit backoff is handled separately by a global gate, discussed in Part 3. The two mechanisms have separate responsibilities, which avoids oscillation.
+
+### Pattern C: `JoinSet` for Dynamic Task Sets
+
+Use this when you do not know how many tasks will be created, or when they finish at different speeds:
+
+```rust
+use tokio::task::JoinSet;
+
+let mut set = JoinSet::new();
+for item in items {
+    set.spawn(async move { process(item).await });
+}
+while let Some(result) = set.join_next().await {
+    match result {
+        Ok(output) => handle(output),
+        Err(e) => eprintln!("task panic: {}", e),
+    }
+}
+```
+
+`JoinSet` manages task lifecycles: creation, result collection, and panic handling. You do not need to track every `JoinHandle` manually.
+
+### Retry Rounds with Decreasing Concurrency
+
+ChatPD's fetcher also does one more thing: papers that fail with transient errors, such as 429 or timeout, go into a retry pool, but each retry round uses lower concurrency:
+
+```rust
+fn round_concurrency(cap: usize, round: usize) -> usize {
+    (cap / (round + 1)).max(4).min(cap)
+}
+// Round 1: cap/2, Round 2: cap/3, Round 3: cap/4
+```
+
+Between rounds, the system waits 90 seconds for the service to recover. After three rounds, papers that still cannot be fetched are marked as throttled and the pipeline continues.
+
+---
+
+## 5. Error Propagation in Concurrent Code
+
+In sequential code, `?` propagates errors up the call stack. In concurrent code, each task has its own call stack, so you need an explicit strategy.
+
+### Strategy 1: Each Task Returns `Result`
+
+```rust
+let handle = tokio::spawn(async {
+    fallible_work().await?;
+    Ok::<_, MyError>(())
+});
+match handle.await.unwrap() {
+    Ok(()) => println!("success"),
+    Err(e) => eprintln!("failed: {}", e),
+}
+```
+
+### Strategy 2: Broadcast Fatal Errors with `AtomicBool`
+
+```rust
+let abort = Arc::new(AtomicBool::new(false));
+
+// After detecting a fatal error:
+abort.store(true, Ordering::Relaxed);
+
+// Other tasks check before starting each item:
+if abort.load(Ordering::Relaxed) { return; }
+
+// After all tasks finish:
+if abort.load(Ordering::Relaxed) {
+    return Err("pipeline aborted".into());
+}
+```
+
+### Strategy 3: Classify Errors at Runtime
+
+ChatPD classifies errors into three categories at runtime:
+
+```rust
+fn is_transient(e: &str) -> bool {
+    e.contains("429") || e.contains("403")
+        || e.contains("timed out") || e.contains("connection")
+}
+fn is_fatal(e: &str) -> bool {
+    e.contains("401") || e.contains("quota")
+}
+// Everything else is terminal: write an error record and continue.
+```
+
+### Strategy 4: Task Panic
+
+If one task panics, it does not automatically kill other tasks. The panic is exposed when someone `.await`s its `JoinHandle`. In a `JoinSet`, it appears as the `Err` returned by `join_next().await`.
+
+---
+
+## 6. Combined Exercise
+
+Put these pieces together: a concurrent HTTP fetcher with a global rate-limit gate and backoff retry.
+
+```rust
+struct RateLimitGate {
+    until: RwLock<Option<Instant>>,
+}
+
+impl RateLimitGate {
+    fn new() -> Self { Self { until: RwLock::new(None) } }
+
+    async fn set_cooldown(&self, secs: u64) {
+        let deadline = Instant::now() + Duration::from_secs(secs);
+        let mut g = self.until.write().await;
+        if g.map_or(true, |t| t < deadline) { *g = Some(deadline); }
+    }
+
+    async fn wait_if_needed(&self) {
+        loop {
+            let until = *self.until.read().await;
+            match until {
+                None => return,
+                Some(t) if t <= Instant::now() => return,
+                Some(t) => tokio::time::sleep(t - Instant::now()).await,
+            }
+        }
+    }
+}
+
+async fn fetch_with_retry(
+    client: &reqwest::Client, url: &str,
+    gate: &Arc<RateLimitGate>, max_retries: u32,
+) -> Result<String, String> {
+    for retry in 0..max_retries {
+        gate.wait_if_needed().await;
+        match client.get(url).send().await {
+            Ok(r) if r.status().is_success() => return r.text().await.map_err(|e| e.to_string()),
+            Ok(r) if r.status().as_u16() == 429 => {
+                gate.set_cooldown(60).await;
+                let ms = 500 * 2u64.pow(retry);
+                tokio::time::sleep(Duration::from_millis(ms)).await;
+            }
+            Ok(r) => return Err(format!("HTTP {}", r.status())),
+            Err(e) if e.is_timeout() => {
+                tokio::time::sleep(Duration::from_millis(500 * 2u64.pow(retry))).await;
+            }
+            Err(e) => return Err(e.to_string()),
+        }
+    }
+    Err("exceeded max retries".to_string())
+}
+```
+
+Useful extensions to explore next: add a `Semaphore` for adaptive concurrency, pipe fetcher output into an `mpsc::channel`, and add an `AtomicBool` abort flag.
+
+---
+
+[Part 3](/tech/rust-concurrency-3-advanced/) walks through five real concurrency bugs from ChatPD production: 429 cascade storms, cold-start concurrency, DB lock contention, fatal-error broadcast, and graceful shutdown, along with the fixes that actually worked.
+
+*Code examples are simplified from production Rust code in [ChatPD](https://github.com/anjiexu-pku), [asterinas](https://github.com/asterinas/asterinas), and [mcpr](https://github.com/TankTechnology).*
+
+</div>
+
+<script>
+function switchLang(lang) {
+  document.getElementById('lang-zh').style.display = lang === 'zh' ? '' : 'none';
+  document.getElementById('lang-en').style.display = lang === 'en' ? '' : 'none';
+  const links = document.querySelectorAll('.lang-switch a');
+  links.forEach(a => a.classList.remove('active'));
+  document.querySelector('.lang-switch a[href="#' + lang + '"]').classList.add('active');
+  history.replaceState(null, '', '#' + lang);
+}
+if (location.hash === '#en') {
+  switchLang('en');
+}
+</script>

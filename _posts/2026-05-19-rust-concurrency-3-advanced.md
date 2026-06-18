@@ -33,8 +33,8 @@ excerpt: "Rust concurrency notes part 3: five real-world concurrency bugs and th
 </style>
 
 <div class="lang-switch">
-  <a class="active" href="#zh">中文</a>|
-  <a href="#en">English (TODO)</a>
+  <a class="active" href="#zh" onclick="switchLang('zh');return false">中文</a>|
+  <a href="#en" onclick="switchLang('en');return false">English</a>
 </div>
 
 <div id="lang-zh" class="lang-content" markdown="1">
@@ -503,3 +503,484 @@ Rust 给的并发原语不多，但够锋利。优雅不在于工具本身——
 *本系列代码示例从 [ChatPD](https://github.com/anjiexu-pku)、[asterinas](https://github.com/asterinas/asterinas) 和 [mcpr](https://github.com/TankTechnology) 的生产 Rust 代码简化而来。感谢 Claude Code 协助梳理这些模式。*
 
 </div>
+
+<div id="lang-en" class="lang-content" style="display:none" markdown="1">
+
+# Rust Concurrency Notes (3): Elegant Fixes for Five Real Bugs
+
+[Part 1](/tech/rust-concurrency-1-foundation/) covered ownership, `Send`/`Sync`, `Arc`, and `Result`. [Part 2](/tech/rust-concurrency-2-toolbox/) filled in the concurrency toolbox. This post walks through five real bugs I encountered in ChatPD production. For each one, I describe what happened, why it happened, the naive fix, and the solution that actually worked. The code examples are simplified from production code.
+
+---
+
+## Problem 1: 429 Cascade Storm
+
+### What Happened
+
+The pipeline had 12 concurrent fetchers, each downloading papers from ar5iv, an arXiv HTML rendering service. One day ar5iv started returning HTTP 429, Too Many Requests. Then this happened:
+
+1. All 12 fetchers received 429 at the same time.
+2. Each fetcher started its own exponential backoff timer.
+3. All 12 timers expired at almost the same moment.
+4. All 12 sent new requests at once and received 429 again.
+5. The loop repeated, creating a **self-reinforcing rate-limit storm**.
+
+### Why It Happened
+
+Each fetcher operated independently. There was no shared rate-limit state.
+
+```rust
+// Each task acts alone: 12 tasks sleep, wake, and retry together.
+async fn fetch_with_retry(url: &str) -> Result<String> {
+    for retry in 0..MAX_RETRIES {
+        match client.get(url).send().await {
+            Ok(r) => return r.text().await,
+            Err(e) if e.contains("429") => {
+                let ms = 500 * 2u64.pow(retry);
+                sleep(Duration::from_millis(ms)).await;
+                // all 12 sleep -> all wake -> all request -> all get 429
+            }
+            Err(e) => return Err(e),
+        }
+    }
+}
+```
+
+### Naive Fix
+
+Add random jitter:
+
+```rust
+let jitter = rand::thread_rng().gen_range(0..=1000u64);
+sleep(Duration::from_millis(ms + jitter)).await;
+```
+
+This helps, but it does not fix the root cause: each task still has no idea that other tasks are also seeing 429. Once there are 200 LLM callers, jitter alone is not statistically reliable enough.
+
+### Elegant Fix: A Global Rate-Limit Gate
+
+Use one shared gate that every fetcher checks before sending a request. If any fetcher receives 429, it closes the gate for a cooldown period. All fetchers wait at the gate.
+
+```rust
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::sync::RwLock;
+
+/// None means the gate is open. Some(Instant) means closed until that time.
+static RATE_LIMITED_UNTIL: Lazy<Arc<RwLock<Option<Instant>>>> =
+    Lazy::new(|| Arc::new(RwLock::new(None)));
+
+/// Called after receiving 429. Only extends the cooldown, never shortens it.
+async fn set_rate_limit_cooldown(secs: u64) {
+    let deadline = Instant::now() + Duration::from_secs(secs);
+    let mut guard = RATE_LIMITED_UNTIL.write().await;
+    if guard.map_or(true, |t| t < deadline) {
+        *guard = Some(deadline);
+    }
+}
+
+/// Called before every request. If the gate is closed, wait until it opens.
+async fn wait_for_rate_limit() {
+    loop {
+        let until = *RATE_LIMITED_UNTIL.read().await;
+        match until {
+            None => return,
+            Some(t) if t <= Instant::now() => return,
+            Some(t) => tokio::time::sleep(t - Instant::now()).await,
+        }
+    }
+}
+```
+
+Using it takes two lines:
+
+```rust
+async fn fetch_with_retry(url: &str) -> Result<String> {
+    for retry in 0..MAX_RETRIES {
+        wait_for_rate_limit().await;  // check before every request
+
+        match client.get(url).send().await {
+            Ok(r) => return r.text().await,
+            Err(e) if e.contains("429") => {
+                set_rate_limit_cooldown(60).await;  // close the gate
+                let ms = 500 * 2u64.pow(retry);
+                let jitter = rand::thread_rng().gen_range(0..=1000u64);
+                sleep(Duration::from_millis(ms + jitter)).await;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+}
+```
+
+### Why This Works
+
+1. **One extra line per request:** `wait_for_rate_limit().await`
+2. **Read-heavy state fits `RwLock`:** the common path is an uncontended read.
+3. **Only extending the cooldown avoids races:** two tasks that receive 429 at the same time cannot shorten each other's cooldown.
+4. **It scales from 12 fetchers to 200 LLM callers:** the gate does not care how many tasks exist.
+
+### Before vs After
+
+| | Before | After |
+|---|--------|-------|
+| 429 retry rate | 80%+ | <5% |
+| First success after cooldown | ~15% | ~85% |
+| Time for 1000 papers | 45 minutes | 12 minutes |
+
+---
+
+## Problem 2: Cold-Start Concurrency
+
+### What Happened
+
+After adding the rate-limit gate, the pipeline stopped creating storms, but it still was not efficient enough. The fetcher started immediately at the full 32 concurrency slots. If ar5iv's capacity was low that day, the first wave of 32 requests all got 429, the gate closed, and the whole round was wasted.
+
+### Why It Happened
+
+The code assumed the configured maximum was always safe. In reality, external service capacity changes with time, server load, and deployment state. Starting at full throttle is like stomping on the accelerator on an icy road: you only discover the limit after crossing it.
+
+### Elegant Fix: Adaptive Concurrency with `Semaphore`
+
+Start at 4-way concurrency. Every 24 successes, open one more slot until reaching the maximum.
+
+```rust
+use tokio::sync::Semaphore;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+let sem = Arc::new(Semaphore::new(4));    // start at 4
+let max = 32;
+let cur = Arc::new(AtomicUsize::new(4));
+let success = Arc::new(AtomicUsize::new(0));
+
+for paper in papers {
+    let permit = sem.clone().acquire_owned().await.unwrap();
+
+    tokio::spawn(async move {
+        if fetch(paper).await.is_ok() {
+            let n = success.fetch_add(1, Ordering::Relaxed) + 1;
+            if n % 24 == 0 {
+                let c = cur.load(Ordering::Relaxed);
+                if c < max {
+                    cur.fetch_add(1, Ordering::Relaxed);
+                    sem.add_permits(1);  // dynamically expand capacity
+                }
+            }
+        }
+        drop(permit);
+    });
+}
+```
+
+The semaphore only increases. The global rate-limit gate from Problem 1 handles backoff. The semaphore handles capacity discovery. The two mechanisms do not fight each other.
+
+### Retry Rounds with Decreasing Concurrency
+
+Papers that fail with transient errors enter a retry pool, but each retry round uses lower concurrency:
+
+```rust
+fn round_concurrency(cap: usize, round: usize) -> usize {
+    (cap / (round + 1)).max(4).min(cap)
+}
+```
+
+Between rounds, the pipeline waits 90 seconds for the service to recover. After three rounds, papers that still fail are marked as throttled and the pipeline continues. This gives retries a fair chance without looping forever.
+
+```rust
+for round in 0..3 {
+    if round > 0 {
+        let c = round_concurrency(32, round);
+        tokio::time::sleep(Duration::from_secs(90)).await;
+        futures::stream::iter(&pending)
+            .map(|p| retry_fetch(p))
+            .buffer_unordered(c)
+            .for_each(|()| async {})
+            .await;
+    }
+    // collect remaining failures for the next round
+}
+```
+
+### Why This Works
+
+1. **Discover capacity instead of assuming it.**
+2. **Separate concerns:** the gate handles backoff; the semaphore handles capacity discovery.
+3. **Retry rounds degrade gracefully:** later retries are more conservative and cannot loop forever.
+4. **Observable behavior:** `FetchPerfSummary` records initial/max concurrency, ramp rate, and retry rounds, so the system can explain what happened.
+
+---
+
+## Problem 3: DB Lock Contention
+
+### What Happened
+
+ChatPD's first database access pattern was a global `Arc<Mutex<Connection>>`. Every part of the pipeline, including fetcher, builder, and LLM caller, had to acquire the connection to check existing data or write results. Even read-only queries queued on the same mutex.
+
+### Why It Happened
+
+This is the "one big lock" anti-pattern. It works at low concurrency, but when 200 LLM callers all ask "has this paper already been processed?", the mutex becomes the bottleneck.
+
+### Elegant Fix: A Single-Owner Writer
+
+Only the DB writer task needs the connection. Other tasks send write records to it through a channel. The writer exclusively owns the connection: no `Arc`, no `Mutex`.
+
+```rust
+enum WriteRecord {
+    Success { arxiv_id: String, raw_response: String, parsed_json: Option<String>, ... },
+    Error   { arxiv_id: String, status: ProcessingStatusType, ... },
+}
+
+// The DB writer is the sole owner of Connection. Zero locks.
+pub async fn run_db_writer(
+    mut rx: mpsc::Receiver<WriteRecord>,
+    db_path: String,
+) -> StagePerfSummary {
+    let conn = rusqlite::Connection::open(&db_path)?;
+    conn.execute_batch("PRAGMA journal_mode=WAL;")?;
+
+    while let Some(record) = rx.recv().await {
+        match record {
+            WriteRecord::Success { ... } => persist_production_write(&conn, ...)?,
+            WriteRecord::Error { ... }   => persist_terminal_error(&conn, ...)?,
+        }
+    }
+    // Connection drops here; WAL can be checkpointed.
+}
+```
+
+Pipeline wiring:
+
+```rust
+let (write_tx, write_rx) = mpsc::channel::<WriteRecord>(cap * 2 + 100);
+
+let fetcher  = tokio::spawn(run_fetcher(..., write_tx.clone(), ...));
+let builder  = tokio::spawn(run_builder(..., write_tx.clone(), ...));
+let llm      = tokio::spawn(run_llm_caller(..., write_tx.clone(), ...));
+drop(write_tx);  // drop the main sender; channel closes after upstream finishes
+let db_writer = tokio::spawn(run_db_writer(write_rx, db_path));
+```
+
+### Why This Works
+
+1. **Zero lock contention:** the writer owns the connection.
+2. **One writer is SQLite's happy path:** SQLite serializes writes anyway; one writer avoids `SQLITE_BUSY`.
+3. **The channel provides backpressure:** if the writer is slow, `send().await` blocks producers naturally.
+4. **`drop(write_tx)` is the shutdown signal:** no special shutdown message is needed.
+
+---
+
+## Problem 4: Fatal Error Broadcast
+
+### What Happened
+
+One morning the pipeline started processing a new batch of papers. After about 300 papers, the LLM API key ran out of quota. Then:
+
+1. One LLM caller received HTTP 401.
+2. That task stopped. **The other 199 tasks kept running.**
+3. 199 tasks times 3 retries each produced 597 wasted API calls, all failing with 401.
+4. The pipeline looked "stuck" for several minutes.
+
+### Why It Happened
+
+The error was detected locally, but there was no mechanism to tell the other tasks. This is the same shape as Problem 1, except the shared state is a fatal error rather than rate limiting.
+
+### Elegant Fix: `AtomicBool` Abort Flag
+
+One of the simplest concurrency primitives solves the problem completely when used correctly:
+
+```rust
+use std::sync::atomic::{AtomicBool, Ordering};
+
+let abort_flag = Arc::new(AtomicBool::new(false));
+
+// -- inside each LLM caller ------------------------------------------------
+tokio::spawn(async move {
+    if abort_flag.load(Ordering::Relaxed) { return; }  // someone already aborted
+
+    match call_llm(&request).await {
+        Ok(r) => { /* handle */ }
+        Err(e) => {
+            // Fatal: API quota exhausted. Tell every task to stop.
+            if e.contains("401") || e.contains("quota") {
+                eprintln!("fatal: API quota exhausted, aborting pipeline");
+                abort_flag.store(true, Ordering::Relaxed);
+                return;
+            }
+            // Terminal but non-fatal: write an error record and continue.
+            if let Some(status) = classify_error(&e) {
+                write_tx.send(WriteRecord::Error { ... }).await;
+                return;
+            }
+            // Transient: skipped in pipeline mode.
+            transient_skipped.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+});
+
+// -- inside other workers --------------------------------------------------
+while let Some(item) = rx.recv().await {
+    if abort_flag.load(Ordering::Relaxed) { return; }
+    process(item).await;
+}
+
+// -- after joining all tasks -----------------------------------------------
+if abort_flag.load(Ordering::Relaxed) {
+    return Err("pipeline aborted: API quota exhausted; retry after topping up".into());
+}
+```
+
+This pattern forces errors into three categories:
+
+| Category | Example | Action |
+|----------|---------|--------|
+| Transient | 429, timeout | Retry or skip |
+| Terminal | 404, parse failure | Write an error record and continue |
+| Fatal | 401, quota exhausted | Set abort flag and stop everything |
+
+The core insight: **transient errors belong to one task; fatal errors belong to everyone.**
+
+### Why This Works
+
+1. **One `AtomicBool`:** no channel and no complex shutdown protocol.
+2. **`Relaxed` ordering is enough:** the flag is not synchronized with other state; it only asks tasks to stop soon.
+3. **Multiple checkpoints:** at the start of each work item and on the LLM caller error path.
+4. **Idempotent:** setting the flag twice is harmless.
+
+---
+
+## Problem 5: Graceful Shutdown
+
+### What Happened
+
+The pipeline runs four stages in separate `tokio::spawn` tasks connected by three channels. When the work is done, everything needs to stop cleanly: no lost data, no hanging tasks, no leaked resources.
+
+### Why This Is Hard
+
+The naive approach, calling `abort()` on every handle, loses in-flight work. The opposite approach, waiting for every task to finish by itself, can hang forever if a task is waiting on a channel that will never receive another item.
+
+### Elegant Fix: Channel Drop Cascade + Abort Flag
+
+Use two mechanisms, each for its own purpose.
+
+**Mechanism 1: Channel Drop Cascade for Normal Completion**
+
+```rust
+let (paper_tx, paper_rx) = mpsc::channel::<Paper>(cap);
+let (req_tx, req_rx)     = mpsc::channel::<PaperRequest>(cap);
+let (write_tx, write_rx) = mpsc::channel::<WriteRecord>(cap * 2 + 100);
+
+let fetcher  = tokio::spawn(run_fetcher(input, paper_tx, write_tx.clone(), ...));
+let builder  = tokio::spawn(run_builder(paper_rx, req_tx, write_tx.clone(), ...));
+let llm      = tokio::spawn(run_llm_caller(req_rx, write_tx.clone(), ...));
+drop(write_tx);  // drop the main sender
+let db_writer = tokio::spawn(run_db_writer(write_rx, ...));
+
+// Shutdown cascade:
+// 1. Fetcher finishes -> drops paper_tx.
+// 2. Builder sees paper_rx closed -> finishes -> drops req_tx.
+// 3. LLM caller sees req_rx closed -> finishes -> drops its write_tx clone.
+// 4. DB writer sees write_rx closed -> finishes.
+//
+// Each stage's "while let Some(item) = rx.recv().await" exits naturally.
+```
+
+**Mechanism 2: Abort Flag for Emergency Stop**
+
+```rust
+let abort_flag = Arc::new(AtomicBool::new(false));
+
+// In the LLM caller: 401/quota -> abort_flag.store(true, Relaxed)
+// In other stages: if abort_flag.load(Relaxed) { return; }
+// After join: if abort_flag.load(Relaxed) { return Err(...); }
+```
+
+### Why Two Mechanisms
+
+They serve different purposes and should not be merged:
+
+| | Channel Drop Cascade | Abort Flag |
+|---|----------------------|------------|
+| Purpose | Normal completion | Emergency stop |
+| Trigger | Fetcher exhausts input | Quota exhausted, disk full |
+| Effect | Stages drain naturally | Stop immediately |
+| Data loss | None; in-flight work drains | Acceptable; in-flight work is discarded |
+| Exit code | Success | Error |
+
+Merging these paths makes both worse: normal shutdown becomes too abrupt and loses data, while emergency shutdown becomes too slow because it waits for draining.
+
+### Complete Join Logic
+
+```rust
+let fetch_perf = fetcher.await.map_err(|e| format!("fetcher panic: {}", e))?;
+let build_perf = builder.await.map_err(|e| format!("builder panic: {}", e))?;
+let llm_perf   = llm.await.map_err(|e| format!("llm panic: {}", e))?;
+let db_perf    = db_writer.await.map_err(|e| format!("db panic: {}", e))?;
+
+if abort_flag.load(Ordering::Relaxed) {
+    return Err("pipeline aborted: API quota exhausted".into());
+}
+
+Ok(PipelineSummary {
+    throttled_fetch: throttled.load(Ordering::Relaxed),
+    persisted_success: db_perf.output_count,
+    perf: Some(PipelinePerfSummary { fetch: fetch_perf, build: build_perf,
+                                     llm: llm_perf, db_write: db_perf, ... }),
+})
+```
+
+### Why This Works
+
+1. **The normal path is almost zero-cost:** `drop(tx)` propagates naturally through the pipeline.
+2. **The emergency path is immediate:** one `store(true, Relaxed)` tells every task to stop.
+3. **No custom shutdown messages:** the channel primitives already encode completion.
+4. **Testable:** provide finite input to test normal shutdown; inject a 401 to test emergency shutdown.
+
+---
+
+## Summary: Ten Principles Learned from Bugs
+
+| # | Principle | Anti-pattern |
+|---|-----------|--------------|
+| 1 | Put a global rate-limit gate in front of external services | Independent retries |
+| 2 | Measure capacity; do not assume it | Hard-coded concurrency ceiling |
+| 3 | Make concurrency tunable through environment variables | Recompile after changing code |
+| 4 | Single writer means ownership transfer, not locks | `Arc<Mutex<Connection>>` |
+| 5 | Cold start: begin small and increase after success | Start at full throttle |
+| 6 | Retry means exponential backoff plus random jitter | Fixed-interval sleep |
+| 7 | Broadcast fatal errors with `AtomicBool` | Local detection, global ignorance |
+| 8 | Dropping a channel sender is a completion signal | Custom "done" messages |
+| 9 | Decrease concurrency across retry rounds | Same concurrency for every retry |
+| 10 | Record performance data for every concurrency decision | "It feels faster" |
+
+### Tool Cheat Sheet
+
+| Scenario | Use |
+|----------|-----|
+| Share read-mostly state across tasks | `Arc<RwLock<T>>` |
+| Share a simple flag or counter | `AtomicBool` / `AtomicUsize` |
+| Pass data between stages | `mpsc::channel` |
+| Control concurrency | `Semaphore` for adaptive, `buffer_unordered(n)` for fixed |
+| Collect results from a dynamic task set | `JoinSet` |
+| Stop everything after a fatal error | `AtomicBool` abort flag |
+| Graceful shutdown after normal completion | `drop(sender)` |
+
+Rust does not give you many concurrency primitives, but the ones it gives are sharp enough. Elegance is not in the tools themselves; it is in knowing which combination matches which problem. These five bugs, and their fixes, are lessons I learned by tripping over them in ChatPD.
+
+---
+
+*The code examples in this series are simplified from production Rust code in [ChatPD](https://github.com/anjiexu-pku), [asterinas](https://github.com/asterinas/asterinas), and [mcpr](https://github.com/TankTechnology). Thanks to Claude Code for helping organize these patterns.*
+
+</div>
+
+<script>
+function switchLang(lang) {
+  document.getElementById('lang-zh').style.display = lang === 'zh' ? '' : 'none';
+  document.getElementById('lang-en').style.display = lang === 'en' ? '' : 'none';
+  const links = document.querySelectorAll('.lang-switch a');
+  links.forEach(a => a.classList.remove('active'));
+  document.querySelector('.lang-switch a[href="#' + lang + '"]').classList.add('active');
+  history.replaceState(null, '', '#' + lang);
+}
+if (location.hash === '#en') {
+  switchLang('en');
+}
+</script>

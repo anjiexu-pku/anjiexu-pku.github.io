@@ -11,7 +11,7 @@ About Me
 ========
 
 I am a Ph.D. student supervised by Prof. [Leye Wang](https://wangleye.github.io/) at the School of Computer Science, Peking University.
-Prior to this, I completed my bachelor's degree in Computer Science at Northwestern Polytechnical University.
+Prior to this, I completed my bachelor's degree through the Kang Jichang Honors Program in Computer Science at Northwestern Polytechnical University.
 
 My research interests include **Academic Data Management**, **Data Privacy Protection**, and related fields. I am passionate about exploring innovative solutions to challenges in Computer Science, Mathematics, and Physics.
 Recently, I have also been working on **AI Agents** and **Agent Skill Evaluation**, especially on practical benchmarking systems for utility and security.
@@ -20,7 +20,7 @@ Education
 =========
 
 - 2024 - present: Ph.D. student in Computer Science, **Peking University**
-- 2020 - 2024: B.S. in Computer Science, **Northwestern Polytechnical University**
+- 2020 - 2024: B.S. in Computer Science (Kang Jichang Honors Program), **Northwestern Polytechnical University**
 
 Publications
 ============
