@@ -1,5 +1,5 @@
 ---
-title: "Rust 并发笔记 (1)：所有权、类型与错误"
+title: "Rust Concurrency Notes (1): Ownership, Types, and Errors"
 date: 2026-05-19
 categories:
   - tech

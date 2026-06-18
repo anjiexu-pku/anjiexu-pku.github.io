@@ -1,5 +1,5 @@
 ---
-title: "Rust 并发笔记 (3)：五个真实 Bug 的优雅解法"
+title: "Rust Concurrency Notes (3): Elegant Fixes for Five Real Bugs"
 date: 2026-05-19
 categories:
   - tech

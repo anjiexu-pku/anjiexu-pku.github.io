@@ -1,5 +1,5 @@
 ---
-title: "Docker socket 存在但连接被拒绝：一次 snap + apt 双安装的排障记录"
+title: "Docker Socket Exists but Connection Is Refused: Debugging a snap + apt Double Installation"
 date: 2026-05-28
 categories:
   - tech

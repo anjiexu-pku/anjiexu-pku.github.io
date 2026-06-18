@@ -36,8 +36,8 @@ excerpt: "A single-molecule bound on cryptochrome radical pair compass sensitivi
 </style>
 
 <div class="lang-switch">
-  <a href="#zh" onclick="switchLang('zh');return false">中文</a>|
-  <a href="#en" class="active" onclick="switchLang('en');return false">English</a>
+  <a class="active" href="#en" onclick="switchLang('en');return false">English</a>|
+  <a href="#zh" onclick="switchLang('zh');return false">中文</a>
 </div>
 
 <div id="lang-zh" class="lang-content" style="display:none" markdown="1">
@@ -538,5 +538,11 @@ function switchLang(lang) {
     el.classList.remove('active');
   });
   document.querySelector('.lang-switch a[href="#' + lang + '"]').classList.add('active');
+  if (history.replaceState) {
+    history.replaceState(null, '', '#' + lang);
+  }
+}
+if (location.hash === '#zh') {
+  switchLang('zh');
 }
 </script>

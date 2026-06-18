@@ -1,5 +1,5 @@
 ---
-title: "Rust 并发笔记 (2)：线程、锁、Channel 与并发控制"
+title: "Rust Concurrency Notes (2): Threads, Locks, Channels, and Concurrency Control"
 date: 2026-05-19
 categories:
   - tech

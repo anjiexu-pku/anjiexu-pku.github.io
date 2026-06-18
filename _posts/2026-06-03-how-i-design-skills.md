@@ -317,5 +317,11 @@ function switchLang(lang) {
     el.classList.remove('active');
   });
   document.querySelector('.lang-switch a[href="#' + lang + '"]').classList.add('active');
+  if (history.replaceState) {
+    history.replaceState(null, '', '#' + lang);
+  }
+}
+if (location.hash === '#zh') {
+  switchLang('zh');
 }
 </script>
