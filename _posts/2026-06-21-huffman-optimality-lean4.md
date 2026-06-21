@@ -41,9 +41,9 @@ def cost : HuffTree → ℕ
 
 其中 `rootFreq t` 是 `t` 中所有叶子频率之和。该递归式等价于
 
-\[
+\\[
 \operatorname{cost}(t)=\sum_{s\in\operatorname{alphabet}(t)} \operatorname{freqOf}(s,t)\cdot \operatorname{depthOf}(s,t).
-\]
+\\]
 
 Huffman 算法在森林上反复合并当前根频率最小的两棵树：
 
@@ -142,7 +142,24 @@ def splitLeaf (t : HuffTree) (z a b fa fb : ℕ) : HuffTree :=
 ### 4.1 基例
 
 - **长度 1**：`ts = [htLeaf s f]`，直接用 `optimum_leaf`。
+
+  ```lean
+  lemma optimum_leaf (s f : ℕ) (h_f_pos : f > 0) : optimum (htLeaf s f) := by
+    refine ⟨by simp [consistent], ?_, ?_⟩
+    · simp [alphabet, freqOf, h_f_pos]
+    · intro u _ h_sameFreqs
+      simpa [cost] using cost_nonneg u
+  ```
+
 - **长度 2**：`ts = [htLeaf sa fa, htLeaf sb fb]`。由 `forest_consistent` 得 `sa ≠ sb`，再用 `optimum_two_distinct_leaves`。
+
+  ```lean
+  lemma optimum_two_distinct_leaves (sa fa sb fb : ℕ)
+      (h_ne : sa ≠ sb) (h_fa_pos : fa > 0) (h_fb_pos : fb > 0) :
+      optimum (htInner (htLeaf sa fa) (htLeaf sb fb)) := by
+    -- 先验证两个符号的频率为正，再说明任何 competitor 的 cost 都不更低
+    ...
+  ```
 
 ### 4.2 归纳步
 
@@ -160,13 +177,28 @@ let reduced := insortTree (htLeaf sa (fa + fb)) (tc :: rest)
 - `forest_consistent_insortTree_fresh`：因为 `sa` 原本不出现在 `tc :: rest` 中，插入 `htLeaf sa (fa+fb)` 保持不交性；
 - `insortTree_length`：长度增加 1，而原长度减 2，故 `reduced.length = ts.length - 1`。
 
-于是对 `reduced` 用归纳假设得到
+下面是这一步的 Lean 骨架（不变式的具体证明已省略）：
 
 ```lean
-h_opt_reduced : optimum (huffman reduced)
+let reduced := insortTree (htLeaf sa (fa + fb)) (tc :: rest)
+
+have h_reduced_nonempty : reduced ≠ [] := by
+  rw [← List.length_pos_iff_ne_nil, insortTree_length]
+  omega
+have h_reduced_sorted : forest_sorted reduced := ...
+have h_reduced_cons : forest_consistent reduced := ...
+have h_reduced_leaves : ∀ t ∈ reduced, height t = 0 := ...
+have h_reduced_pos : ∀ t ∈ reduced, rootFreq t > 0 := ...
+have h_len : reduced.length < n := by
+  rw [← hlen]
+  simp [reduced, insortTree_length]
+
+have h_opt_reduced : optimum (huffman reduced) :=
+  ih reduced.length h_len reduced h_reduced_sorted h_reduced_cons
+    h_reduced_leaves h_reduced_pos h_reduced_nonempty rfl
 ```
 
-接下来需要把 `huffman reduced` 中的合并叶子重新分裂，并让它等于原森林的 Huffman 输出。
+于是得到 `optimum (huffman reduced)`。接下来需要把 `huffman reduced` 中的合并叶子重新分裂，并让它等于原森林的 Huffman 输出。
 
 ---
 
@@ -194,15 +226,18 @@ theorem optimum_splitLeaf (t : HuffTree) (z b fa fb : ℕ)
 `splitLeaf` 的成本增加量恰好是 `fa + fb`：
 
 ```lean
-lemma cost_splitLeaf_eq :
-    cost (splitLeaf t z z b fa fb) = cost t + fa + fb
+theorem cost_splitLeaf_eq (t : HuffTree) (z a b fa fb : ℕ) (h_cons : consistent t)
+    (h_z_in : z ∈ alphabet t) (h_sum : freqOf z t = fa + fb) :
+    cost (splitLeaf t z a b fa fb) = cost t + fa + fb := by
+  -- 先证 splitLeaf 保持 rootFreq，再对树结构做归纳
+  ...
 ```
 
 因此要证明分裂后的树最优，只需证明：对任意竞争对手 `u`，
 
-\[
+\\[
 \operatorname{cost}(t)+fa+fb \le \operatorname{cost}(u).
-\]
+\\]
 
 ### 5.2 交换论证（exchange argument）
 
@@ -250,15 +285,26 @@ def mergePair (a b z fz : ℕ) : HuffTree → HuffTree
 关键引理：
 
 - `cost_mergePair_of_areSiblings`：合并后成本减少 `fa + fb`，即
-  \[
+
+  ```lean
+  lemma cost_mergePair_of_areSiblings (t : HuffTree) (a b z fa fb : ℕ)
+      (h_sib : areSiblings a b t) (h_cons : consistent t) (h_ne : a ≠ b)
+      (h_fa : freqOf a t = fa) (h_fb : freqOf b t = fb) (h_fz : fz = fa + fb) :
+      (cost (mergePair a b z fz t) : ℤ) = (cost t : ℤ) - (fa : ℤ) - (fb : ℤ) := by
+    -- 对 areSiblings 归纳，直接计算同胞对合并前后的 cost
+    ...
+  ```
+
+  用整数写出来就是
+  \\[
   \operatorname{cost}(v'') = \operatorname{cost}(u) - fa - fb.
-  \]
+  \\]
 - `nodeCount_mergePair_lt_of_areSiblings`：节点数严格减少，提供内层强归纳的测度。
 
 于是原目标等价于
-\[
+\\[
 \operatorname{cost}(t) \le \operatorname{cost}(v'').
-\]
+\\]
 而 `v''` 与 `t` 同频率分布且一致，故由 `t` 的最优性直接得到。
 
 ### 5.5 情形枚举
@@ -299,6 +345,24 @@ theorem splitLeaf_huffman_commute (s1 s2 f1 f2 : ℕ) (rest : List HuffTree)
 ```
 
 右端再把 `htInner (htLeaf s1 f1) (htLeaf s2 f2)` 插入有序森林，正好等价于原森林 `htLeaf sa fa :: htLeaf sb fb :: tc :: rest` 的 Huffman 输出。
+
+在 `Optimal.lean` 中，最后一步这样完成：
+
+```lean
+have h_opt_split : optimum (splitLeaf (huffman reduced) sa sa sb fa fb) := by
+  apply optimum_splitLeaf (huffman reduced) sa sb fa fb
+    h_opt_reduced h_a_in_reduced h_b_notin_reduced h_ne
+    h_fa_pos h_fb_pos h_fa_le_fb h_fa_min h_fb_min h_freq_a
+
+have h_eq : splitLeaf (huffman reduced) sa sa sb fa fb =
+    huffman (htLeaf sa fa :: htLeaf sb fb :: tc :: rest) := by
+  rw [show reduced = insortTree (htLeaf sa (fa + fb)) (tc :: rest) by rfl]
+  rw [splitLeaf_huffman_commute sa sb fa fb (tc :: rest) h_a_notin_tc_rest]
+  simp [huffman, insortTree, unite]
+
+rw [h_eq] at h_opt_split
+exact h_opt_split
+```
 
 这正是为什么我们要把“合并两个最小叶子”表述成 `splitLeaf` 的逆操作：它让归纳假设与算法步骤之间有了一个干净的代数恒等式。
 
