@@ -44,7 +44,7 @@ def cost : HuffTree → ℕ
 其中 `rootFreq t` 是 `t` 中所有叶子频率之和。该递归式等价于
 
 \\[
-\operatorname{cost}(t)=\sum_{s\in\operatorname{alphabet}(t)} \operatorname{freqOf}(s,t)\cdot \operatorname{depthOf}(s,t).
+\\operatorname{cost}(t)=\\sum_{s\\in\\operatorname{alphabet}(t)} \\operatorname{freqOf}(s,t)\\cdot \\operatorname{depthOf}(s,t).
 \\]
 
 Huffman 算法在森林上反复合并当前根频率最小的两棵树：
@@ -238,7 +238,7 @@ theorem cost_splitLeaf_eq (t : HuffTree) (z a b fa fb : ℕ) (h_cons : consisten
 因此要证明分裂后的树最优，只需证明：对任意竞争对手 `u`，
 
 \\[
-\operatorname{cost}(t)+fa+fb \le \operatorname{cost}(u).
+\\operatorname{cost}(t)+fa+fb \\le \\operatorname{cost}(u).
 \\]
 
 ### 5.2 交换论证（exchange argument）
@@ -299,13 +299,13 @@ def mergePair (a b z fz : ℕ) : HuffTree → HuffTree
 
   用整数写出来就是
   \\[
-  \operatorname{cost}(v'') = \operatorname{cost}(u) - fa - fb.
+  \\operatorname{cost}(v'') = \\operatorname{cost}(u) - fa - fb.
   \\]
 - `nodeCount_mergePair_lt_of_areSiblings`：节点数严格减少，提供内层强归纳的测度。
 
 于是原目标等价于
 \\[
-\operatorname{cost}(t) \le \operatorname{cost}(v'').
+\\operatorname{cost}(t) \\le \\operatorname{cost}(v'').
 \\]
 而 `v''` 与 `t` 同频率分布且一致，故由 `t` 的最优性直接得到。
 
@@ -427,8 +427,6 @@ V1 证明的核心方法论可以概括为一句话：
 - 把算法的归纳步骤与树手术的代数性质解耦；
 - 在形式化中按 Base → Swap → Merge → Preservation → Commutation → Optimal 的层次组织代码。
 
-后续 V2 的改进方向，正是把这个五元组不变式打包成 `Forest` 结构，并封装 `mergeCheapest` 操作，从而让外层归纳的陈述和战术更加简洁。
-
 ---
 
 ## 10. 参考文献
@@ -445,3 +443,68 @@ V1 证明的核心方法论可以概括为一句话：
    - AFP: <https://www.isa-afp.org/entries/Huffman.html>
 
 5. 我们的 Lean 4 实现：`CfProofs/Greedy/Huffman/` 目录，见 `Optimal.lean` 中的 `optimum_huffman` 与 `optimum_splitLeaf`。
+
+---
+
+## 11. 附录 A：正确性检查清单
+
+在把证明上传之前，我检查了以下几个容易出错的点：
+
+| 检查项 | 说明 | 对应代码 |
+|---|---|---|
+| `cost` 与加权外部路径长度等价 | 递归定义 `cost (htInner l r) = cost l + cost r + rootFreq l + rootFreq r` 等价于 `Σ freq·depth`；`optimum` 定义要求在所有同频率分布的一致树中代价最小。 | `Base.lean` 中 `cost`、`optimum` |
+| 基例确实最优 | `optimum_leaf` 与 `optimum_two_distinct_leaves` 直接验证。 | `Optimal.lean` 开头 |
+| `splitLeaf` 的成本增量正确 | `cost_splitLeaf_eq` 严格给出 `cost t + fa + fb`。 | `Base.lean` |
+| 外层归纳测度严格递减 | 原森林去掉两个最小叶子，插入一个合并叶子，长度从 `n` 变为 `n-1`。 | `insortTree_length` + `omega` |
+| 合并后的叶子符号在剩余森林中新鲜 | 由 `forest_consistent` 推出 `sa ∉ rest`，这是 `forest_consistent_insortTree_fresh` 的前提。 | `Optimal.lean` 归纳步 |
+| `optimum_splitLeaf` 的前提与 Huffman 合并步一致 | `fa ≤ fb`、`fa, fb` 是两个最小频率、`freqOf z t = fa + fb`、`b` 新鲜。 | `Optimal.lean` 归纳步 |
+| 内层归纳测度严格递减 | `mergePair` 合并同胞对时节点数严格减少（`nodeCount_mergePair_lt_of_areSiblings`）。 | `MergeLemmas.lean` |
+| 交换不等式方向正确 | `cost_exchangeLeaf_le` 展开后得到 `(freq_a - freq_x)(depth_x - depth_a) ≤ 0`，与“低频放更深不增 cost”一致。 | `SwapDisjoint.lean` |
+| `splitLeaf` 与 `huffman` 可交换 | `splitLeaf_huffman_commute` 把“先 Huffman 再 split”与“先 split 再 Huffman”等同。 | `Commutation.lean` |
+| 整个项目通过 `lake build` | 无错误、无未完成目标（`sorry`）。 | 见附录 B |
+
+---
+
+## 12. 附录 B：编译报告
+
+我在本地完整编译了包含该证明的 Lean 4 项目，结果如下：
+
+- **工具链**：`leanprover/lean4:v4.29.1`
+- **Lake 版本**：`5.0.0-src+f72c35b (Lean version 4.29.1)`
+- **编译命令**：`lake build`
+- **编译结果**：`Build completed successfully (16524 jobs)`
+- **核心目标**：`CfProofs.Greedy.Huffman.Optimal` 构建成功
+- **状态**：无错误、无未完成目标
+
+> 说明：构建过程中只有一些 `unusedSimpArgs` / `unusedVariables` 的 linter warning，这些是代码风格提示，不影响定理正确性。
+
+---
+
+## 13. 附录 C：完整证明文件
+
+下面是 V1 证明的全部 Lean 4 源文件，可直接下载查看或在 `CfProofs/Greedy/Huffman/` 目录中找到。
+
+**打包下载**：
+- [huffman-optimality-lean4.zip](/files/huffman-optimality-lean4.zip)（包含全部 8 个 `.lean` 文件）
+
+**单个文件**：
+- [`Base.lean`](/files/huffman-optimality-lean4/Base.lean) — 数据类型、成本模型、树手术
+- [`SwapBasic.lean`](/files/huffman-optimality-lean4/SwapBasic.lean) — `swapLeaves` 基本性质
+- [`SwapFreqDepth.lean`](/files/huffman-optimality-lean4/SwapFreqDepth.lean) — 交换后的频率 / 深度
+- [`SwapDisjoint.lean`](/files/huffman-optimality-lean4/SwapDisjoint.lean) — 交换保持一致性、`cost_exchangeLeaf_le`
+- [`MergeLemmas.lean`](/files/huffman-optimality-lean4/MergeLemmas.lean) — `mergePair` 的代数
+- [`Preservation.lean`](/files/huffman-optimality-lean4/Preservation.lean) — 森林不变式与 Huffman 语义
+- [`Commutation.lean`](/files/huffman-optimality-lean4/Commutation.lean) — `splitLeaf` 与 `huffman` 交换律
+- [`Optimal.lean`](/files/huffman-optimality-lean4/Optimal.lean) — `optimum_splitLeaf` 与 `optimum_huffman`
+
+主定理位于 `Optimal.lean` 末尾：
+
+```lean
+theorem optimum_huffman (ts : List HuffTree)
+    (h_sorted : forest_sorted ts)
+    (h_cons : forest_consistent ts)
+    (h_all_leaves : ∀ t ∈ ts, height t = 0)
+    (h_pos : ∀ t ∈ ts, rootFreq t > 0)
+    (h_nonempty : ts ≠ []) :
+    optimum (huffman ts)
+```
