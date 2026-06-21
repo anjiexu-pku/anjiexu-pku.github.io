@@ -1,0 +1,28 @@
+digraph HuffmanV1 {
+  rankdir=TB;
+  node [shape=box, style=rounded, fontname="Helvetica"];
+  edge [arrowhead=open];
+
+  Base [label="Base.lean\nHuffTree / cost / huffman / 树手术"];
+  SwapBasic [label="SwapBasic.lean\nswapLeaves 基本性质"];
+  SwapFreqDepth [label="SwapFreqDepth.lean\n交换后的频率 / 深度"];
+  SwapDisjoint [label="SwapDisjoint.lean\n交换保持一致性\ncost_exchangeLeaf_le"];
+  MergeLemmas [label="MergeLemmas.lean\nmergePair 代数"];
+  Preservation [label="Preservation.lean\n森林不变式 / Huffman 语义"];
+  Commutation [label="Commutation.lean\nsplitLeaf 与 huffman 交换律"];
+  Optimal [label="Optimal.lean\noptimum_splitLeaf\noptimum_huffman", fillcolor=lightblue, style="rounded,filled"];
+
+  Base -> SwapBasic;
+  Base -> SwapFreqDepth;
+  Base -> SwapDisjoint;
+  Base -> MergeLemmas;
+  Base -> Preservation;
+  Base -> Commutation;
+
+  SwapBasic -> SwapDisjoint;
+  SwapFreqDepth -> SwapDisjoint;
+  SwapDisjoint -> Optimal;
+  MergeLemmas -> Optimal;
+  Preservation -> Optimal;
+  Commutation -> Optimal;
+}

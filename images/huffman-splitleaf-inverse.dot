@@ -1,0 +1,34 @@
+digraph SplitLeafInverse {
+  rankdir=TB;
+  node [shape=ellipse, fontname="Helvetica"];
+  edge [arrowhead=none];
+
+  subgraph cluster_left {
+    label="合并后的 reduced tree（归纳假设已知最优）";
+    style=rounded;
+    color=gray;
+
+    root1 [label="..."];
+    leaf_z [label="z\nfa+fb", shape=box, fillcolor=lightyellow, style="filled"];
+    root1 -> leaf_z;
+  }
+
+  mid [label="splitLeaf t z z b fa fb", shape=plaintext];
+
+  subgraph cluster_right {
+    label="分裂后得到原森林的 Huffman 输出";
+    style=rounded;
+    color=gray;
+
+    root2 [label="..."];
+    inner [label="•", shape=circle, fillcolor=lightblue, style="filled"];
+    leaf_z2 [label="z\nfa", shape=box, fillcolor=lightyellow, style="filled"];
+    leaf_b [label="b\nfb", shape=box, fillcolor=lightyellow, style="filled"];
+    root2 -> inner;
+    inner -> leaf_z2;
+    inner -> leaf_b;
+  }
+
+  root1 -> mid [style=invis];
+  mid -> root2 [style=dashed, arrowhead=open];
+}
