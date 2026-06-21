@@ -1,0 +1,21 @@
+/* Neutralize Rouge's .err fallback for Lean code before highlight.js runs.
+   Rouge lacks a Lean lexer, so subscript digits and Unicode symbols are
+   wrapped in <span class="err">. We make them inherit normal text color
+   so the block remains readable even if client-side highlighting is slow
+   or disabled. */
+.language-lean .err,
+.highlighter-rouge.language-lean .err {
+  color: inherit !important;
+  font-style: normal !important;
+  text-decoration: none !important;
+}
+
+/* Make highlight.js fit the minimal-mistakes code box. */
+.highlighter-rouge.language-lean pre {
+  background-color: transparent;
+}
+
+.highlighter-rouge.language-lean pre code.hljs {
+  background: transparent;
+  padding: 0;
+}

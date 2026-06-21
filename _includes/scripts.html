@@ -4,6 +4,20 @@
   <script src="{{ base_path }}/assets/js/post-sidebar-toc.js"></script>
 {% endif %}
 
+<!-- Highlight.js for Lean 4 syntax highlighting -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<script src="{{ base_path }}/assets/js/lean.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('div.language-lean pre code').forEach(function(block) {
+      var result = hljs.highlight(block.textContent, { language: 'lean' });
+      block.className = 'hljs language-lean';
+      block.innerHTML = result.value;
+    });
+  });
+</script>
+
 <!-- Mermaid support -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
 <script>
