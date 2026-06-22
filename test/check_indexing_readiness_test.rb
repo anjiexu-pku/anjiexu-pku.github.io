@@ -82,6 +82,8 @@ class CheckIndexingReadinessTest < Minitest::Test
     assert IndexingReadiness.noise_url?("https://example.com/files/paper1.pdf")
     assert IndexingReadiness.noise_url?("https://example.com/files/slides3.pdf")
     assert IndexingReadiness.noise_url?("https://example.com/print-template.html")
+    assert IndexingReadiness.noise_url?("https://example.com/markdown_generator/")
+    assert IndexingReadiness.noise_url?("https://example.com/docs/blog-writing-style/")
     refute IndexingReadiness.noise_url?("https://example.com/files/huffman-optimality-lean4.zip")
   end
 end

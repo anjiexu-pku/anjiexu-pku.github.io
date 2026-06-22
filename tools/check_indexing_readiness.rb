@@ -45,7 +45,9 @@ module IndexingReadiness
     %r{/teaching(?:/|$)},
     %r{/publication/\d{4}-\d{2}-\d{2}-paper-title-number-\d},
     %r{/files/(?:paper|slides)[1-3]\.pdf$},
-    %r{/print-template\.html$}
+    %r{/print-template\.html$},
+    %r{/markdown_generator(?:/|$)},
+    %r{/docs/blog-writing-style(?:/|\.md$)}
   ].freeze
 
   module_function

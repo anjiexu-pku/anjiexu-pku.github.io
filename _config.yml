@@ -178,6 +178,7 @@ exclude:
   - CHANGELOG
   - Capfile
   - config
+  - docs
   - Dockerfile
   - Gemfile
   - Gruntfile.js
@@ -185,6 +186,7 @@ exclude:
   - LICENSE
   - local
   - log
+  - markdown_generator
   - node_modules
   - package.json*
   - Rakefile
