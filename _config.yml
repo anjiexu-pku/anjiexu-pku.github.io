@@ -189,7 +189,14 @@ exclude:
   - package.json*
   - Rakefile
   - README
+  - files/paper1.pdf
+  - files/paper2.pdf
+  - files/paper3.pdf
+  - files/slides1.pdf
+  - files/slides2.pdf
+  - files/slides3.pdf
   - tmp
+  - talkmap
   - vendor
   - _posts/demo_blog
 keep_files:
