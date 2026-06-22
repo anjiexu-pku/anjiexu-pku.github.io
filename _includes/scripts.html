@@ -10,7 +10,8 @@
 <script src="{{ base_path }}/assets/js/lean.min.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('div.language-lean pre code').forEach(function(block) {
+    if (!window.hljs) return;
+    document.querySelectorAll('div.language-lean pre code, pre code.language-lean').forEach(function(block) {
       var result = hljs.highlight(block.textContent, { language: 'lean' });
       block.className = 'hljs language-lean';
       block.innerHTML = result.value;
