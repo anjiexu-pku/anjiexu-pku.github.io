@@ -26,6 +26,7 @@ Publications
 ============
 
 * *SkillFab: An Agent-Native Skill Production Platform* <br/>
+<img src="/images/publications/skillfab-abstract-preview.png" alt="SkillFab technical report first page abstract preview" style="display: block; max-width: 100%; border: 1px solid #e5e7eb; border-radius: 6px; margin: 0.75rem 0 1rem;">
 **Anjie Xu**, Yifeng Cai, Yi Li, Zixing Wang, Zhiyu Zhang, Jingfan Chen, Ruohan Xu, Leye Wang <br/>
 **Technical Report**, 2026 <br/>
 [Report](https://github.com/cybtopia/skillfab-report/blob/main/skillfab-system-design.pdf) | [Project](https://skillfab.ai) | [Report Repo](https://github.com/cybtopia/skillfab-report)
@@ -62,6 +63,7 @@ Projects
 ========
 
 * **CLRS-Lean** <br/>
+<img src="/images/projects/clrs-lean-logo.png" alt="CLRS-Lean project mark" style="display: block; max-width: 220px; width: 45%; min-width: 160px; border: 1px solid #e5e7eb; border-radius: 8px; margin: 0.5rem 0 0.75rem;">
 [Project](https://tanktechnology.github.io/CLRS-Lean/) | [Code](https://github.com/TankTechnology/CLRS-Lean)
 
 I am currently updating CLRS-Lean, a Lean 4 companion for CLRS-style algorithm correctness proofs. The project explores how classic algorithm reasoning can be represented as machine-checkable formal proofs.
