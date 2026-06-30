@@ -30,7 +30,9 @@ Publications
 **Technical Report**, 2026 <br/>
 [Report](https://github.com/cybtopia/skillfab-report/blob/main/skillfab-system-design.pdf) | [skillfab.ai](https://skillfab.ai/)
 
-<img src="/images/publications/skillfab-abstract-preview.png" alt="SkillFab technical report first page abstract preview" style="display: block; max-width: 100%; border: 1px solid #e5e7eb; border-radius: 6px; margin: 0.75rem 0 1rem;">
+<a class="homepage-preview" href="https://github.com/cybtopia/skillfab-report/blob/main/skillfab-system-design.pdf" aria-label="Open the SkillFab technical report">
+  <img src="/images/publications/skillfab-abstract-preview.png" alt="SkillFab technical report first page abstract preview">
+</a>
 
 * *SkillTester: Benchmarking Utility and Security of Agent Skills* <br/>
 Leye Wang, Zixing Wang, **Anjie Xu**  
@@ -61,11 +63,16 @@ SkillTester is an agent-driven benchmark system for evaluating agent skills from
 Projects
 ========
 
-* **CLRS-Lean** <br/>
-<img src="/images/projects/clrs-lean-logo.png" alt="CLRS-Lean project mark" style="display: block; max-width: 220px; width: 45%; min-width: 160px; border: 1px solid #e5e7eb; border-radius: 8px; margin: 0.5rem 0 0.75rem;">
-[Project](https://tanktechnology.github.io/CLRS-Lean/) | [Code](https://github.com/TankTechnology/CLRS-Lean)
-
-I am currently updating CLRS-Lean, a Lean 4 companion for CLRS-style algorithm correctness proofs. The project explores how classic algorithm reasoning can be represented as machine-checkable formal proofs.
+<div class="project-feature">
+  <a class="project-feature__media" href="https://tanktechnology.github.io/CLRS-Lean/" aria-label="Open CLRS-Lean project page">
+    <img src="/images/projects/clrs-lean-logo.png" alt="CLRS-Lean project mark">
+  </a>
+  <div class="project-feature__body">
+    <h3 class="project-feature__title">CLRS-Lean</h3>
+    <p class="project-feature__description">A Lean 4 formalization project for CLRS-style algorithm correctness proofs, connecting classic algorithm reasoning with machine-checkable proofs.</p>
+    <p class="project-feature__links"><a href="https://tanktechnology.github.io/CLRS-Lean/">Project</a> | <a href="https://github.com/TankTechnology/CLRS-Lean">Code</a></p>
+  </div>
+</div>
 
 
 Blog

@@ -12,7 +12,9 @@ codeurl: 'https://github.com/cybtopia/skillfab-report'
 citation: 'Anjie Xu, Yifeng Cai, Yi Li, Zixing Wang, Zhiyu Zhang, Jingfan Chen, Ruohan Xu, and Leye Wang. (2026). &quot;SkillFab: An Agent-Native Skill Production Platform.&quot; <i>Technical Report</i>.'
 ---
 
-<img src="/images/publications/skillfab-abstract-preview.png" alt="SkillFab technical report first page abstract preview" style="display: block; max-width: 100%; border: 1px solid #e5e7eb; border-radius: 6px; margin: 0.5rem 0 1rem;">
+<a class="homepage-preview" href="https://github.com/cybtopia/skillfab-report/blob/main/skillfab-system-design.pdf" aria-label="Open the SkillFab technical report">
+  <img src="/images/publications/skillfab-abstract-preview.png" alt="SkillFab technical report first page abstract preview">
+</a>
 
 SkillFab is an agent-native platform for producing, reviewing, publishing, and reusing Agent Skills. It turns missing capabilities into demand-first issues, lets contributors implement skill packages through repository-backed submissions, captures Git evidence for review, and publishes accepted packages to a reusable skill registry.
 
