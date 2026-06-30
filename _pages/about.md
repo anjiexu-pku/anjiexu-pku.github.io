@@ -70,7 +70,7 @@ Projects
   <div class="project-feature__body">
     <h3 class="project-feature__title">CLRS-Lean</h3>
     <p class="project-feature__description">A Lean 4 formalization project for CLRS-style algorithm correctness proofs, connecting classic algorithm reasoning with machine-checkable proofs.</p>
-    <p class="project-feature__links"><a href="https://tanktechnology.github.io/CLRS-Lean/">Project</a> | <a href="https://github.com/TankTechnology/CLRS-Lean">Code</a></p>
+    <p class="project-feature__links"><a class="project-feature__url" href="https://tanktechnology.github.io/CLRS-Lean/">tanktechnology.github.io/CLRS-Lean</a></p>
   </div>
 </div>
 

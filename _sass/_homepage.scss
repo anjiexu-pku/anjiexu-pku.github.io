@@ -78,6 +78,25 @@
   font-size: $type-size-6;
 }
 
+.project-feature__url {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.18rem 0.45rem;
+  color: $link-color;
+  line-height: 1.35;
+  text-decoration: none;
+  word-break: break-word;
+  background: mix(#fff, $info-color, 92%);
+  border: 1px solid mix(#fff, $info-color, 72%);
+  border-radius: $border-radius;
+
+  &:hover {
+    color: $link-color-hover;
+    text-decoration: none;
+    background: mix(#fff, $info-color, 86%);
+  }
+}
+
 @media (max-width: 480px) {
   .project-feature {
     grid-template-columns: 112px minmax(0, 1fr);
