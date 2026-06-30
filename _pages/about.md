@@ -25,6 +25,13 @@ Education
 Publications
 ============
 
+* *SkillFab: An Agent-Native Skill Production Platform* <br/>
+**Anjie Xu**, Yifeng Cai, Yi Li, Zixing Wang, Zhiyu Zhang, Jingfan Chen, Ruohan Xu, Leye Wang <br/>
+**Technical Report**, 2026 <br/>
+[Report](https://github.com/cybtopia/skillfab-report/blob/main/skillfab-system-design.pdf) | [Project](https://skillfab.ai) | [Report Repo](https://github.com/cybtopia/skillfab-report)
+
+SkillFab is an agent-native platform for producing, reviewing, publishing, and reusing Agent Skills. It turns missing capabilities into demand-first issues, lets contributors implement skill packages through repository-backed submissions, captures Git evidence for review, and publishes accepted packages to a reusable skill registry. The platform codebase is planned for open-source release in a future repository.
+
 * *SkillTester: Benchmarking Utility and Security of Agent Skills* <br/>
 Leye Wang, Zixing Wang, **Anjie Xu**  
 **arXiv:2603.28815**, 2026  
@@ -50,6 +57,14 @@ SkillTester is an agent-driven benchmark system for evaluating agent skills from
           style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
   </iframe>
 </div> -->
+
+Projects
+========
+
+* **CLRS-Lean** <br/>
+[Project](https://tanktechnology.github.io/CLRS-Lean/) | [Code](https://github.com/TankTechnology/CLRS-Lean)
+
+I am currently updating CLRS-Lean, a Lean 4 companion for CLRS-style algorithm correctness proofs. The project explores how classic algorithm reasoning can be represented as machine-checkable formal proofs.
 
 
 Blog
