@@ -26,12 +26,11 @@ Publications
 ============
 
 * *SkillFab: An Agent-Native Skill Production Platform* <br/>
-<img src="/images/publications/skillfab-abstract-preview.png" alt="SkillFab technical report first page abstract preview" style="display: block; max-width: 100%; border: 1px solid #e5e7eb; border-radius: 6px; margin: 0.75rem 0 1rem;">
 **Anjie Xu**, Yifeng Cai, Yi Li, Zixing Wang, Zhiyu Zhang, Jingfan Chen, Ruohan Xu, Leye Wang <br/>
 **Technical Report**, 2026 <br/>
-[Report](https://github.com/cybtopia/skillfab-report/blob/main/skillfab-system-design.pdf) | [Project](https://skillfab.ai) | [Report Repo](https://github.com/cybtopia/skillfab-report)
+[Report](https://github.com/cybtopia/skillfab-report/blob/main/skillfab-system-design.pdf) | [skillfab.ai](https://skillfab.ai/)
 
-SkillFab is an agent-native platform for producing, reviewing, publishing, and reusing Agent Skills. It turns missing capabilities into demand-first issues, lets contributors implement skill packages through repository-backed submissions, captures Git evidence for review, and publishes accepted packages to a reusable skill registry. The platform codebase is planned for open-source release in a future repository.
+<img src="/images/publications/skillfab-abstract-preview.png" alt="SkillFab technical report first page abstract preview" style="display: block; max-width: 100%; border: 1px solid #e5e7eb; border-radius: 6px; margin: 0.75rem 0 1rem;">
 
 * *SkillTester: Benchmarking Utility and Security of Agent Skills* <br/>
 Leye Wang, Zixing Wang, **Anjie Xu**  
