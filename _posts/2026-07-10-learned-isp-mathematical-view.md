@@ -21,7 +21,14 @@ custom_css:
 
 这句话里有三个层次: 恢复, 是从有噪声、有缺失的 RAW 中估计场景信号; 解释, 是把相机响应、颜色、曝光、噪声和显示模型放到同一个数学框架里; 渲染, 是决定什么样的输出才算“好图像”。深度学习进入 ISP 的真正意义, 是把这些原本由工程规则、厂商经验和人工调参定义的流程, 变成一个由数据、损失函数、结构先验和任务目标共同决定的优化问题。
 
-下面只围绕一个统一模型展开: 场景 $X$ 同时产生 RAW 观测 $R$ 与目标图像 $Y$; 可学习相机前端根据 $R$ 对不可见场景做推断, 再为某种风格、显示设备或下游任务作决策。文章先建立观测模型与 Bayes 解, 再用一张非串行架构图定位论文, 最后把网络结构拆成管线分解、空间算子和推断语义三个彼此独立的选择。
+下面只围绕一个统一模型展开: 场景 $X$ 同时产生 RAW 观测 $R$ 与目标图像 $Y$; 可学习相机前端根据 $R$ 对不可见场景做推断, 再为某种风格、显示设备或下游任务作决策。全文依次回答四个问题:
+
+1. RAW 究竟测到了什么, 又丢掉了什么?
+2. 给定同一份 RAW, 为什么不存在唯一正确的输出?
+3. 一篇论文是在改变管线分解、空间算子, 还是推断语义?
+4. 离开单一 PSNR 后, 应该怎样比较不同相机前端?
+
+观测模型回答第一问, Bayes 决策回答第二问, 中间的交互架构图和三层结构分析回答第三问, 最后的 task risk gap 则给第四问一个可计算的标准。
 
 ## 从观测到决策: 相机前端的统一模型
 
@@ -467,6 +474,8 @@ $$
 更重要的是, 管线分解、空间算子与推断语义并不是同一层级的互斥选项。一个 two-stage ISP 可以在两段都使用 CNN 或 Transformer; 一个 diffusion ISP 仍需 U-Net 或 Transformer 参数化 score; flow matching 的 velocity network 也一样。后面讨论 architecture 时, 我们会始终把这三个选择分开。
 
 ## 三个结构性推论
+
+图 1 负责定位方法, 但定位还不是解释。把统一模型往前推一步, 会得到三条贯穿后文的边界: 物理恢复与主观渲染不能混为一谈; 任务改变会改变最优前端; 最终输出正确也不能保证中间模块可辨识。后面的理论和 architecture 都只是这三条边界的不同实现。
 
 ### 恢复和增强为什么应该分开
 
@@ -948,106 +957,15 @@ $$
 
 这比“传统 ISP vs 深度学习 ISP”的二分法更准确。深度学习只是改变了先验和推理结构的表达能力; 它没有取消观测模型、信息损失和目标函数。真正的理论问题是: 对某个相机系统, 我们到底要估计什么状态, 在什么先验下估计, 又为谁承担损失?
 
-## 深度学习方法如何实现这套理论
+## 架构不是论文名单, 而是三层建模选择
 
-现在可以把前面的理论和深度学习 ISP 论文接起来了。它们不是两套互不相关的叙事。理论给出问题的坐标系; 深度学习论文是在这个坐标系里选择一个可训练的函数族, 再用数据把原本逐图求解的推理过程摊销掉。
+前面已经确定了观测模型、先验、目标变量和损失。深度学习接下来做的事很具体: 选择一个可训练函数族, 用训练数据把逐图求解摊销成一次前向推断。真正容易混乱的地方是, 论文里的 architecture 同时包含三种不同选择:
 
-传统逆问题通常是对每一张 RAW 单独求解:
+1. **管线分解**决定 $R$、中间状态 $S$、输出 $Y$ 和任务变量怎样连接;
+2. **空间算子**决定局部证据、全局上下文和长程依赖怎样计算;
+3. **推断语义**决定模型输出一个 Bayes 点估计, 还是整个条件分布。
 
-$$
-\hat{x}(r)
-=
-\arg\min_x
-E(x;r)
-=
-\arg\min_x
-\left[
-\frac{1}{2}\|MAx-r\|_{\Sigma^{-1}}^2
-+
-\lambda\Phi(x)
-\right].
-$$
-
-深度学习 ISP 则学习一个函数 $F_\theta$, 让它在数据分布上近似这个求解器:
-
-$$
-\theta^\star
-=
-\arg\min_\theta
-\mathbb{E}_{(R,T)}
-\left[
-\ell(F_\theta(R),T)
-\right].
-$$
-
-也就是说, $F_\theta(r)$ 不是凭空替代成像模型, 而是在学习一个 amortized inference map:
-
-$$
-F_\theta(r)
-\approx
-\delta^\star(r)
-=
-\arg\min_u
-\mathbb{E}[\ell(u,S)\mid R=r].
-$$
-
-如果 $T=x$, 且损失是 L2, 最优网络逼近的是条件均值:
-
-$$
-F^\star(r)
-=
-\mathbb{E}[X\mid R=r].
-$$
-
-如果损失是 L1, 它更接近条件中位数。如果损失包含 perceptual loss、GAN loss 或下游 task loss, 那么网络逼近的就不再是“物理真实图像”的后验均值, 而是某个评价系统偏好的 Bayes 决策。这一点解释了为什么不同 learned ISP 论文看似都在做 RAW-to-RGB, 实际学到的东西却很不一样。
-
-把这些论文放回图 1, 它们并不是在竞争同一个“最佳网络”。Deep Joint、DeepISP 和 LSID 主要把逐图优化摊销成前向推断; CameraNet、ReconfigISP 和 InvISP 改变中间分解或函数族; RISP/PyNET 与 task-aware 方法则改变监督目标和最终消费者。前面的表给出位置, 下面进一步解释它们在这些位置上扮演的理论角色。
-
-所以, 深度学习方法大致可以分成四种理论角色。
-
-第一类是“摊销优化器”。Deep Joint Demosaicking、DeepISP 和 LSID 都可以这样理解。传统方法显式解一个 MAP/MMSE 问题; 神经网络把很多训练样本上的求解经验压进参数 $\theta$, 测试时直接输出估计。它快, 但代价是它的先验和噪声假设藏在数据与网络里。
-
-第二类是“可学习先验”。PnP/RED 把 denoiser 当作先验或 proximal 近似; CNN ISP 则把更大的 RAW-to-RGB 推理过程做成一个隐式先验。两者的差别在于: PnP/RED 仍然保留 data fidelity 项, 所以观测模型还在优化循环里; 纯端到端 ISP 常常只保留训练损失, 因而更依赖数据覆盖。
-
-第三类是“结构化假设空间”。CameraNet、ReconfigISP、InvISP 和 Model-Based ISP 都不是简单追求更大的网络, 而是在限制 $F_\theta$ 的形状。CameraNet 用两阶段结构表达 restoration/enhancement 分解; ReconfigISP 用模块图表达可搜索管线; InvISP 用可逆结构表达信息守恒; Model-Based ISP 用传统模块表达可解释性。理论上, 它们都是在选择一个更有偏置的 $\mathcal{F}$:
-
-$$
-F_\theta
-\in
-\mathcal{F}_{\mathrm{structured}}
-\subset
-\mathcal{F}_{\mathrm{all}}.
-$$
-
-这会牺牲一部分任意拟合能力, 但换来泛化、可解释性、可控性或硬件可部署性。
-
-第四类是“重定义目标变量”。RISP/PyNET、VisionISP、ISP4ML、hardware-in-the-loop ISP 和 Neural Auto-Exposure 都在提醒我们: learned ISP 的输出不一定是“真实照片”。如果目标是 DSLR 风格, 网络学的是风格化 Bayes 决策; 如果目标是检测准确率, ISP 学的是任务充分表示; 如果目标是鲁棒性, RAW 分布就成了过滤不自然扰动的经验先验。
-
-这也解释了一个容易误解的点: 深度学习论文的贡献常常不是“发现了更真实的 ISP”, 而是改变了下面某一项:
-
-$$
-\underbrace{p(r\mid s)}_{\text{观测模型}},
-\quad
-\underbrace{p(s)}_{\text{先验}},
-\quad
-\underbrace{\mathcal{F}}_{\text{可学习函数族}},
-\quad
-\underbrace{\ell}_{\text{损失}},
-\quad
-\underbrace{T}_{\text{监督目标}}.
-$$
-
-一旦这么看, 我们就能更冷静地读这些论文。问一个 learned ISP 方法好不好, 不应该只问 PSNR 高不高, 而应该问:
-
-1. 它假设 RAW 中有哪些信息还可恢复?
-2. 它的训练目标 $T$ 到底代表物理真实、相机风格、人类偏好, 还是任务标签?
-3. 它把哪些先验显式写进模型, 又把哪些先验交给数据学习?
-4. 它的结构约束会不会帮助跨传感器、跨噪声、跨曝光泛化?
-5. 它有没有把不可逆信息丢失误写成可逆变换?
-
-因此, 理论分析和深度学习论文之间的关系可以压缩成一句话:
-
-> 理论告诉我们 learned ISP 在估计什么、损失什么、约束什么; 深度学习论文则是在不同数据、结构和任务目标下, 给这个估计问题构造可训练的近似求解器。
+因此, U-Net、two-stage、Transformer、diffusion 和 flow matching 不能排成一条从旧到新的替代链。一个 two-stage ISP 可以使用 Transformer; 一个 diffusion ISP 仍需 U-Net 或 Transformer 参数化 score; flow matching 也同样需要空间网络参数化 velocity。下面先看 architecture 如何限制函数族, 再分别讨论空间算子和生成式推断。
 
 ### 网络结构也是一种先验
 
@@ -1094,6 +1012,8 @@ $$
 > 这个 architecture 到底把哪些先验写进了 $\mathcal{F}_A$?
 
 下面逐类看。
+
+### 空间与尺度先验
 
 #### U-Net / encoder-decoder: 多尺度后验估计
 
@@ -1171,6 +1091,8 @@ $$
 3. 后续高分辨率阶段只需要做 residual correction。
 
 这能解释为什么 pyramid network 很适合手机 RAW 到 DSLR 风格图像的映射: DSLR 风格不仅是局部清晰度, 还包含全局颜色、动态范围和 tone curve。普通浅层局部 CNN 很难同时处理这些尺度。
+
+### 管线分解与信息路径
 
 #### Residual / refinement: 学习相对传统 ISP 的修正
 
@@ -1306,6 +1228,8 @@ Invertible architecture 的 inductive bias 是: 输出图像不仅要好看, 还
 
 这里也有一个边界: 如果最终文件仍然是普通 8-bit JPEG, 完整可逆当然不可能。可逆 ISP 往往需要更高维表示、隐藏通道、side information 或特殊编码方式。理论上它解决的是函数族的可逆性, 不是魔法般取消量化损失。
 
+### 结构搜索与任务条件
+
 #### Reconfigurable / NAS: 学习假设空间本身
 
 ReconfigISP 这类方法比固定网络更进一步。它不是只在一个 $\mathcal{F}_A$ 里学参数, 而是在多个结构之间选择:
@@ -1420,9 +1344,11 @@ $$
 
 当我们说某个 neural ISP 结构有效时, 更准确的说法应该是: 它选择的函数族 $\mathcal{F}_A$ 与这个成像任务的观测模型、先验、损失函数和计算约束更匹配。
 
-## 把可学习相机前端拆成三个建模选择
+## 从空间算子到生成式推断
 
-图 1 暴露了一个关键区别: one-stage、two-stage 与 invertible 选择随机变量怎样连接; CNN 和 Transformer 选择怎样参数化空间函数; regression、diffusion 和 flow matching 选择模型输出一个决策点还是条件分布。把这些名字排成一条“架构升级路线”并不准确。一个完整系统至少包含三个彼此独立的选择:
+上一节主要讨论了管线和函数族: 信息走哪条路径, 是否引入中间状态, 是否要求可逆, 是否让结构随任务变化。还剩下两个容易被混在一起的问题: 用什么空间算子实现每个模块, 以及模块究竟估计一个点还是一个分布。
+
+把三层选择放回一张表, 它们的边界是:
 
 | 建模层级 | 选择 | 数学对象 | 在 learned ISP 中的角色 |
 | --- | --- | --- | --- |
@@ -1431,7 +1357,7 @@ $$
 | 空间算子 | Transformer | 内容自适应的非局部核 | 参数化全局颜色、长程依赖、自相似纹理和场景条件 |
 | 推断语义 | regression / diffusion / flow | 条件统计量、score 或 velocity | 决定输出点估计、后验样本还是概率输运 |
 
-这两条轴可以从同一个问题出发:
+三层选择共享同一个概率问题:
 
 $$
 R \sim p(r\mid S),
@@ -1454,80 +1380,7 @@ $$
 
 空间算子决定如何参数化 $F_\theta$、score 或 velocity; 推断语义决定模型最终近似点决策 $\delta^\star(r)$, 还是完整条件分布 $p(Y\mid R=r)$。
 
-### CNN / U-Net: 局部 Markov 先验和快速摊销推理
-
-CNN 的基本算子是卷积:
-
-$$
-h_{l+1}(p)
-=
-\sigma
-\left(
-\sum_{q\in\mathcal{K}}
-W_l(q)h_l(p+q)
-+b_l
-\right).
-$$
-
-这个形式有两个很强的先验。
-
-第一, 它是局部的。输出 $h_{l+1}(p)$ 主要依赖邻域 $\mathcal{N}(p)$。这和许多 ISP 子问题吻合: demosaicing 看 Bayer 邻域, denoising 看局部纹理与边缘, sharpening 看局部频率。
-
-第二, 它是平移等变的:
-
-$$
-F(T_aR)
-=
-T_aF(R).
-$$
-
-也就是说, 同一种边缘、纹理和 CFA pattern 无论出现在图像哪个位置, 处理规则都应相同。这对传感器网格上的局部恢复非常合理。
-
-从先验角度看, CNN 很像在学习一个局部能量函数或局部后验估计:
-
-$$
-\Phi(x)
-\approx
-\sum_p
-\phi_\theta(x_{\mathcal{N}(p)}),
-$$
-
-并把逐图优化:
-
-$$
-\hat{x}
-=
-\arg\min_x
-\|MAx-r\|^2
-+
-\lambda\Phi(x)
-$$
-
-摊销成一次前向传播:
-
-$$
-\hat{x}
-\approx
-F_\theta(r).
-$$
-
-U-Net 在 CNN 上加了多尺度 encoder-decoder 和 skip connection。它并没有改变“局部恢复”的根基, 但补上了 CNN 原本较弱的全局上下文。可以把 U-Net 写成:
-
-$$
-F_{\theta}(R)
-=
-D_\theta
-\left(
-E_\theta(R),
-\{S_\theta^{(l)}(R)\}_{l=1}^L
-\right).
-$$
-
-这里 $E_\theta(R)$ 估计曝光、白平衡、场景亮度等全局变量; $S_\theta^{(l)}(R)$ 保留不同尺度的局部细节。对 learned ISP 来说, U-Net 的理论角色是:
-
-> 用一个多尺度、平移等变的函数族, 快速近似 RAW 条件下的 Bayes 点估计。
-
-它的弱点也很清楚: 如果颜色风格依赖全局语义, 或者纹理恢复需要很远位置的自相似结构, 纯 CNN 的固定局部核会比较吃力。
+前面已经说明, CNN/U-Net 把局部性、平移等变和多尺度 skip path 写进函数族。它非常适合 CFA 邻域、噪声和纹理恢复, 但全局颜色判断与远距离自相似仍需要扩大感受野。Transformer 正是对这个空间假设的修改; diffusion 和 flow matching 修改的则不是感受野, 而是推断语义。
 
 ### Transformer: 内容自适应的非局部成像算子
 
@@ -1892,7 +1745,7 @@ $$
 
 如果一篇论文无法回答这些问题, 那么“更好的 architecture”往往只是一个不完整的结论。反过来, 一旦能指出它修改了图中的哪一块, 不同方法就有了可比较的共同坐标。
 
-## 从 Bayes risk 推出这些论文的族谱
+## 一个最终比较尺度: task risk gap
 
 上面的六元组还只是论文阅读坐标。要让它真正有解释力, 需要再往前推一步: 什么叫一个相机前端“保留了任务需要的信息”?
 
@@ -1954,46 +1807,19 @@ $$
 
 这里 $\mathcal{R}_{\tau}$ 衡量任务性能, $I(R;F(R))$ 或码率约束衡量表示大小, $C(F)$ 衡量延迟、功耗和硬件复杂度。不同论文其实是在这个目标里打开不同的系数: 摄影 ISP 让 human rendering 权重大; RAW detection 让 task loss 权重大; mobile / edge 方法让 $C(F)$ 权重大; invertible ISP 则把信息保留约束推到极端。
 
-### 为什么不存在通用最优 ISP
+**任务差异会产生 risk gap。**
 
-如果两个任务 $\tau_1,\tau_2$ 的损失不同, 它们的 Bayes 决策一般不同:
-
-$$
-\delta_{\tau}^{\star}(r)
-=
-\arg\min_u
-\mathbb{E}
-[
-\ell_{\tau}(u,Y_{\tau})
-\mid R=r
-].
-$$
-
-给人看的图像希望有舒服的 tone、颜色和噪声观感; 检测器可能更需要暗部边缘、高光区域和物体纹理。若传统 ISP 是:
+前面已经从 Bayes 决策得到: 损失 $\ell_{\tau}$ 一变, 最优前端就可能改变。risk gap 让这个结论可测量。传统人眼 ISP $H(R)$ 只要丢掉了任务相关信息, 就会满足:
 
 $$
-Y_{rgb}=H(R),
+I(Y_{\tau};H(R))<I(Y_{\tau};R)
+\quad\Longrightarrow\quad
+\Delta_{\tau}(H)>0.
 $$
 
-并且 $H$ 包含 clipping、tone mapping、gamma、8-bit quantization 和 JPEG compression, 那么由数据处理不等式:
+因此 task-aware ISP 不是笼统地宣称“RAW 比 RGB 好”, 而是在特定任务和成本预算下寻找 $F$, 让 $\Delta_{\tau}(F)$ 尽量小、同时不让 $C(F)$ 失控。
 
-$$
-I(Y_{\tau};H(R))
-\le
-I(Y_{\tau};R).
-$$
-
-只要这个不等式是严格的, 就会出现:
-
-$$
-\mathcal{R}_{\tau}(H(R))
->
-\mathcal{R}_{\tau}(R).
-$$
-
-这就是 task-aware ISP 的理论起点。它不是说 RGB 不好, 而是说人眼 RGB 不是所有任务的充分统计量。VisionISP、ISP4ML、DynamicISP、AdaptiveISP、RAW-Adapter、RAM、Dark-ISP、TA-ISP 都可以看成在寻找另一个 $F$ 让 $\Delta_{\tau}(F)$ 变小, 同时不让 $C(F)$ 爆掉。
-
-### 串行管线为什么危险, 并行管线为什么合理
+**串行不可逆步骤会累积 risk gap。**
 
 传统 ISP 是串行组合:
 
@@ -2041,27 +1867,9 @@ $$
 
 再用 $\mathcal{L}_{task}+\lambda C(a)$ 在任务性能和计算成本之间折中。并行分支是“保留多种候选统计”, 动态策略是“按场景选择处理路径”; 二者都是对固定串行 ISP 的理论回应。
 
-### 两阶段和模块化为什么提高可解释性
+**模块化只有在中间状态受约束时才提高解释性。**
 
-端到端 RAW-to-RGB 网络只约束整体映射:
-
-$$
-Y \approx F_{\theta}(R).
-$$
-
-如果存在任意可逆变换 $T$, 那么分解:
-
-$$
-F_{\theta}
-=
-D_{\psi}\circ E_{\phi}
-=
-(D_{\psi}\circ T^{-1})\circ(T\circ E_{\phi})
-$$
-
-给出的最终输出完全一样, 但中间表示含义完全不同。因此, 只用最终 RGB 监督时, 中间层是否真的对应去噪、去马赛克、白平衡或颜色校正, 在数学上不可辨识。
-
-两阶段或模块化方法的价值, 是给中间变量加约束:
+这里不再重复前面的可辨识性推导。结论只有一个: 把网络写成 $F=D\circ E$ 并不会自动让中间表示具有物理意义; 真正起作用的是对中间状态 $S$ 的额外约束:
 
 $$
 \min_{\phi,\psi}
@@ -2071,46 +1879,17 @@ $$
 \mathcal{L}_{latent}(E_{\phi}(R),S).
 $$
 
-CameraNet、Model-Based ISP、Dark-ISP 都可以这样理解 [6,21,46]。它们不是迷信传统模块, 而是在缩小等价解空间。物理中间变量 $S$ 越明确, 模型越不容易用数据集捷径解释训练集, 跨相机和跨曝光泛化也更有希望。
+CameraNet、Model-Based ISP、Dark-ISP 都可以这样理解 [6,21,46]。模块数量不是解释性的来源; 明确的 $S$、对应监督和物理约束才是。
 
-### 可逆、reverse ISP、diffusion 与 flow 的共同问题
+**生成式与反向方法共同面对多解后验。**
 
-如果 forward ISP $H$ 是 many-to-one, 则:
-
-$$
-H(R_1)=H(R_2)=Y,
-\qquad
-R_1\ne R_2.
-$$
-
-这意味着:
-
-$$
-H(R\mid Y)>0.
-$$
-
-因此 RGB-to-RAW 不能被理解为求一个确定性逆函数, 而应理解为后验建模:
+这一组方法共享的不是 backbone, 而是多解性。forward ISP 若是 many-to-one, 就有 $H(R\mid Y)>0$; RGB-to-RAW 因而只能建模后验:
 
 $$
 p(R\mid Y,m).
 $$
 
-Unprocessing、CycleISP、ReRAW、RAW-Flow 都在处理这个后验, 只是选择不同近似 [8,9,39,50]。Cycle consistency 给后验加自洽约束; ReRAW 通过多头和采样权重改善经验后验拟合; RAW-Flow 把后验近似写成 latent transport。它们都不能消除 $H(R\mid Y)>0$ 这个事实, 只能选择一种合理的 coupling 或显式保留多解性。
-
-同理, RAW-to-sRGB 也未必是单峰的。若同一份 RAW 可以有多种合理渲染风格, 则:
-
-$$
-p(Y\mid R)
-\text{ is multi-modal}.
-$$
-
-L2 regression 给出条件均值:
-
-$$
-F_{L2}^{\star}(R)=\mathbb{E}[Y\mid R],
-$$
-
-这会把多种合理渲染平均掉。Diffusion 和 flow matching 的理论价值, 是把目标从点估计改成条件分布或概率路径:
+Unprocessing、CycleISP、ReRAW、RAW-Flow 只是用近似反推、自洽约束、多头经验分布或 latent transport 选择不同 coupling [8,9,39,50]。同理, RAW-to-sRGB 若存在多种合理风格, diffusion 与 flow 的价值就在于把条件均值升级为条件分布或概率路径:
 
 $$
 q_{\theta}(Y\mid R)
@@ -2118,9 +1897,9 @@ q_{\theta}(Y\mid R)
 p(Y\mid R).
 $$
 
-这解释了为什么 ISPDiffuser、RAW-Diffusion、RAW-Flow 这类方法不是简单“生成模型更强”, 而是在处理多解后验。它们的风险也由此而来: 如果 RAW likelihood 或颜色一致性约束太弱, 生成先验会从“补足不确定性”滑向“制造传感器没有测到的细节”。
+两种方向的边界相同: 模型只能表达或选择后验, 不能消除信息损失; RAW likelihood 或颜色一致性太弱时, 生成先验就会从“补足不确定性”滑向“制造没有测到的细节”。
 
-### Adapter 和 task-oriented ISP 是先验迁移
+**Adapter 处理的是先验迁移。**
 
 RAW-Adapter 和 TA-ISP 还揭示了另一个问题: 下游模型 $G_{\omega}$ 通常已经在 sRGB 分布上预训练。它隐含了一个输入分布先验:
 
@@ -2147,14 +1926,14 @@ $$
 
 因此 RAW-Adapter、TA-ISP 与传统 RAW-to-RGB 的目标不同。它们输出的不是摄影意义上的最终图像, 而是“预训练视觉模型可消费的充分表示”。这也解释了为什么它们强调轻量、modulation、input-level / model-level adapter: 论文贡献在于用很小的 $C(F)$ 换取较小的 task risk gap。
 
-### 用 risk gap 重新整理论文
+### 用 task risk gap 回看论文
 
 现在可以把收录的论文整理成一条理论链:
 
 | 理论问题 | 数学对象 | 代表论文 | 解释 |
 | --- | --- | --- | --- |
 | RAW 比 sRGB 多保留什么? | $I(Y_{\tau};R)$ vs. $I(Y_{\tau};H(R))$ | VisionISP、ISP4ML、ROD、AODRaw、RAWDet-7 | 证明或评估传统 ISP 对任务的 risk gap |
-| 如何近似 RAW oracle? | $\mathcal{R}_{\tau}(F(R))-\mathcal{R}_{\tau}(R)$ | RAM、Dark-ISP、TA-ISP、RAW-Adapter | 学一个低成本任务充分表示 |
+| 如何近似 RAW oracle? | $\Delta_\tau(F)$ | RAM、Dark-ISP、TA-ISP、RAW-Adapter | 学一个低成本任务充分表示 |
 | 管线应固定还是自适应? | $F_a(R),\, a\sim\pi(a\mid R)$ | DynamicISP、AdaptiveISP | 把 ISP 结构和参数变成条件化策略 |
 | 中间模块是否可解释? | $F=D\circ E$ 的 identifiability | CameraNet、Model-Based ISP、Dark-ISP | 用潜变量或物理模块缩小等价解空间 |
 | 信息能否保留? | $H(R\mid Z)$ 或 $I(R;Z)$ | InvISP、ReconfigISP | 把可逆性、结构搜索和硬件约束写入函数族 |
@@ -2325,27 +2104,20 @@ $$
 
 ## 我得到的结论
 
-第一, learned ISP 不是简单的图像增强。它是一个从传感器观测出发, 在不确定性下做恢复和渲染决策的问题。
+整篇文章最终只需要保留四个判断。
 
-第二, RAW 和 JPEG 的差别是信息论层面的差别。RAW 保留了更接近物理测量的线性高 bit-depth 数据; JPEG 是经过非线性、量化和压缩后的显示结果。低光 RAW 恢复和低光 JPEG 增强不是同一个问题。
-
-第三, 用监督学习训练出的 ISP 不是“真实 ISP”, 而是某个数据集、目标和损失函数下的 Bayes 决策器。目标来自 Canon DSLR, 它就学 Canon 风格; 目标来自长曝光, 它就学长曝光恢复; 目标来自人类修图, 它就学人的偏好。
-
-第四, restoration 和 enhancement 应该被区分。前者面向物理信号恢复, 后者面向显示、审美或任务目标。把二者全塞进黑箱可以工作, 但会失去结构解释, 也容易混淆目标。
-
-第五, 不存在一个对所有任务最优的 ISP。给人看的图像、给检测器看的图像、给三维重建用的图像, 可能需要不同的前端处理。ISP 是任务定义的一部分, 不是中性的预处理。
-
-第六, 深度学习没有让成像模型变得不重要。恰恰相反, 越要学习 ISP, 越需要知道哪些信息在 RAW 中, 哪些信息在 JPEG 中已经丢失, 哪些步骤有明确物理意义, 哪些步骤是主观渲染, 哪些目标会引入幻觉。
-
-第七, 网络结构不是附属实现细节。U-Net、pyramid、two-stage、cycle、invertible、reconfigurable 或 task-aware modulation, 都是在选择不同的函数族 $\mathcal{F}_A$。它们把多尺度性、潜变量分解、信息保留、可逆性、任务条件化和硬件成本写进 learned ISP 的假设空间。换结构, 本质上是在换一种隐式先验。
-
-第八, 一个完整 learned ISP 由三个独立选择组成: 管线分解决定变量怎样连接, CNN/Transformer 参数化空间算子, regression/diffusion/flow 定义点估计或条件分布怎样学习。它们可以自由组合, 不是一条从旧到新的架构替代链。
+1. **先问信息还在不在。** RAW 保留更接近物理测量的线性高 bit-depth 数据; JPEG 已经过非线性、量化和压缩。前者更接近带先验的恢复, 后者在信息丢失处必然更多依赖生成先验。
+2. **再问系统要为谁承担损失。** learned ISP 不是寻找唯一“真实照片”, 而是在数据分布、渲染条件和损失函数下做 Bayes 决策。给人看、给检测器用和给三维重建用, 对应不同的最优前端。
+3. **然后问结构约束了什么。** restoration/enhancement 分解、U-Net、Transformer、可逆网络和动态管线分别改变信息路径、空间先验或假设空间; diffusion 与 flow matching 则进一步改变点估计和条件分布之间的选择。
+4. **最后用任务充分性比较方法。** PSNR 只评价某个参考渲染。若输出要服务下游任务, 更关键的是表示相对 RAW oracle 增加了多少 Bayes risk, 以及为降低这段 risk gap 付出了多少算力、带宽和硬件成本。
 
 如果把这篇文章压缩成一句话, 我会写:
 
 > learned ISP 的本质, 是把相机内部从 RAW 到图像的工程流水线, 重新表述为一个带物理观测模型、自然图像先验、渲染偏好和任务损失的 Bayes 决策问题。
 
-这也是它最有意思的地方。它不是让相机“更会修图”, 而是逼我们重新定义: 对一个相机系统来说, 什么才是值得输出的图像?
+这也是它最有意思的地方。它不是让相机“更会修图”, 而是逼我们重新定义: 对一个相机系统和一个具体任务来说, 什么信息值得保留, 什么输出值得生成?
+
+这篇文章从 RAW 开始, 默认光已经被镜头和传感器压成了有限观测。下一篇[《相机如何把光变成数据: 从投影、曝光到神经场的统一数学视角》]({% post_url 2026-07-10-computational-photography-geometry-optics-light %})把同一个问题再向前推进: 在 RAW 出现以前, 视角、孔径、曝光、焦点和光照究竟决定了哪些信息能够进入相机。
 
 ## 参考文献
 
