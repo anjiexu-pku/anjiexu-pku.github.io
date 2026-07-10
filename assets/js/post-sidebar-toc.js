@@ -67,7 +67,7 @@
 
     var menu = toc.querySelector(".post-sidebar-toc__menu");
     var titleText = toc.querySelector(".post-sidebar-toc__title-text");
-    var selector = toc.getAttribute("data-toc-selector") || "h2,h3";
+    var selector = toc.getAttribute("data-toc-selector") || "h2";
     var sections = [];
     var activeSection = null;
     var ticking = false;

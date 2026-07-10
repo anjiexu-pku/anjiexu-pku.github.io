@@ -337,15 +337,6 @@
     word-break: break-word;
   }
 
-  .post-sidebar-toc__item--h3 {
-    font-size: $type-size-8;
-  }
-
-  .post-sidebar-toc__item--h4 {
-    font-size: $type-size-8;
-    color: mix(#000, $gray, 2%);
-  }
-
   li.is-active > a {
     color: #000;
     font-weight: bold;
@@ -359,9 +350,6 @@
     list-style: none;
   }
 
-  ul ul {
-    margin-left: 0.65rem;
-  }
 }
 
 .page__content > .post-sidebar-toc {
