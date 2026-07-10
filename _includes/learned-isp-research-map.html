@@ -1,0 +1,312 @@
+<figure class="isp-research-map" data-isp-map data-active-lens="overview" aria-labelledby="isp-map-caption">
+  <div class="isp-map__controls" role="tablist" aria-label="Learned ISP 建模视角">
+    <button class="is-active" type="button" id="isp-map-tab-overview" role="tab" aria-selected="true" aria-controls="isp-map-panel-overview" data-isp-lens="overview">总览</button>
+    <button type="button" id="isp-map-tab-observation" role="tab" aria-selected="false" aria-controls="isp-map-panel-observation" data-isp-lens="observation">观测与数据</button>
+    <button type="button" id="isp-map-tab-direct" role="tab" aria-selected="false" aria-controls="isp-map-panel-direct" data-isp-lens="direct">点估计</button>
+    <button type="button" id="isp-map-tab-factorized" role="tab" aria-selected="false" aria-controls="isp-map-panel-factorized" data-isp-lens="factorized">恢复与分解</button>
+    <button type="button" id="isp-map-tab-generative" role="tab" aria-selected="false" aria-controls="isp-map-panel-generative" data-isp-lens="generative">生成式</button>
+    <button type="button" id="isp-map-tab-reverse" role="tab" aria-selected="false" aria-controls="isp-map-panel-reverse" data-isp-lens="reverse">Reverse ISP</button>
+    <button type="button" id="isp-map-tab-task" role="tab" aria-selected="false" aria-controls="isp-map-panel-task" data-isp-lens="task">任务感知</button>
+  </div>
+
+  <div class="isp-map__diagram" aria-label="Learned ISP 的因果生成、可选推断路径与任务分支">
+    <svg viewBox="0 0 1120 700" role="img" aria-labelledby="isp-map-svg-title isp-map-svg-desc" xmlns="http://www.w3.org/2000/svg">
+      <title id="isp-map-svg-title">Learned ISP 的非串行拓扑</title>
+      <desc id="isp-map-svg-desc">场景同时生成 RAW 观测和参考目标。RAW 可以经点估计、恢复与渲染分解或生成式路径得到输出；Reverse ISP 回到 RAW 域，任务分支可以从输出或 RAW 表示得到预测。</desc>
+      <defs>
+        <marker id="isp-map-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path fill="context-stroke" d="M 0 0 L 10 5 L 0 10 z" />
+        </marker>
+        <marker id="isp-map-arrow-muted" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path fill="context-stroke" d="M 0 0 L 10 5 L 0 10 z" />
+        </marker>
+      </defs>
+
+      <g class="isp-map__svg-route" data-isp-route="world observation">
+        <text class="isp-map__svg-section-label" x="48" y="28">真实世界与配对数据</text>
+        <path class="isp-map__svg-edge" d="M 230 82 L 360 82" marker-end="url(#isp-map-arrow)" />
+        <text class="isp-map__svg-edge-label" x="257" y="68">p(R | X,m)</text>
+        <path class="isp-map__svg-edge isp-map__svg-edge--reference" d="M 225 62 C 430 12, 630 12, 800 63" marker-end="url(#isp-map-arrow)" />
+        <text class="isp-map__svg-edge-label" x="520" y="31">rho_u(X)</text>
+
+        <g class="isp-map__svg-node isp-map__svg-node--scene">
+          <rect x="48" y="48" width="182" height="70" rx="7" />
+          <text x="139" y="76">潜在场景 X</text>
+          <text class="isp-map__svg-node-subtitle" x="139" y="99">辐照度 · 光谱 · 运动</text>
+        </g>
+        <g class="isp-map__svg-node isp-map__svg-node--raw" data-isp-select="observation" role="button" tabindex="0" aria-label="查看观测与数据论文">
+          <title>查看观测与数据论文</title>
+          <rect x="360" y="48" width="194" height="70" rx="7" />
+          <text x="457" y="76">RAW 观测 R</text>
+          <text class="isp-map__svg-node-subtitle" x="457" y="99">CFA · 噪声 · 曝光 · m</text>
+        </g>
+        <g class="isp-map__svg-node isp-map__svg-node--target" data-isp-select="observation" role="button" tabindex="0" aria-label="查看观测与数据论文">
+          <title>查看观测与数据论文</title>
+          <rect x="800" y="48" width="190" height="70" rx="7" />
+          <text x="895" y="76">参考目标 Y</text>
+          <text class="isp-map__svg-node-subtitle" x="895" y="99">风格 · 长曝光 · DSLR</text>
+        </g>
+      </g>
+
+      <rect class="isp-map__svg-boundary" x="40" y="160" width="1040" height="360" rx="8" />
+      <text class="isp-map__svg-boundary-label" x="560" y="187">Learned inference: forward 候选路径与 reverse 分支</text>
+
+      <g class="isp-map__svg-route" data-isp-route="direct">
+        <path class="isp-map__svg-edge isp-map__svg-edge--direct" d="M 457 118 L 457 238 L 535 238" marker-end="url(#isp-map-arrow)" />
+        <g class="isp-map__svg-node isp-map__svg-node--direct" data-isp-select="direct" role="button" tabindex="0" aria-label="查看直接估计论文">
+          <title>查看直接估计论文</title>
+          <rect x="535" y="205" width="198" height="66" rx="7" />
+          <text x="634" y="232">直接估计 F(R)</text>
+          <text class="isp-map__svg-node-subtitle" x="634" y="254">point estimate</text>
+        </g>
+        <path class="isp-map__svg-edge isp-map__svg-edge--direct" d="M 733 238 L 824 276" marker-end="url(#isp-map-arrow)" />
+      </g>
+
+      <g class="isp-map__svg-route" data-isp-route="factorized">
+        <path class="isp-map__svg-edge isp-map__svg-edge--factorized" d="M 425 118 C 340 192, 326 285, 348 362" marker-end="url(#isp-map-arrow)" />
+        <g class="isp-map__svg-node isp-map__svg-node--restore" data-isp-select="factorized" role="button" tabindex="0" aria-label="查看恢复与分解论文">
+          <title>查看恢复与分解论文</title>
+          <rect x="250" y="345" width="194" height="66" rx="7" />
+          <text x="347" y="372">恢复表示 S</text>
+          <text class="isp-map__svg-node-subtitle" x="347" y="394">q(S | R,m)</text>
+        </g>
+        <path class="isp-map__svg-edge isp-map__svg-edge--factorized" d="M 444 378 L 565 378" marker-end="url(#isp-map-arrow)" />
+        <g class="isp-map__svg-node isp-map__svg-node--render" data-isp-select="factorized" role="button" tabindex="0" aria-label="查看恢复与分解论文">
+          <title>查看恢复与分解论文</title>
+          <rect x="565" y="345" width="196" height="66" rx="7" />
+          <text x="663" y="372">渲染 E(S,u)</text>
+          <text class="isp-map__svg-node-subtitle" x="663" y="394">tone · color · style</text>
+        </g>
+        <path class="isp-map__svg-edge isp-map__svg-edge--factorized" d="M 761 378 L 825 319" marker-end="url(#isp-map-arrow)" />
+      </g>
+
+      <g class="isp-map__svg-route" data-isp-route="generative">
+        <path class="isp-map__svg-edge isp-map__svg-edge--generative" d="M 500 118 C 588 208, 622 295, 633 442" marker-end="url(#isp-map-arrow)" />
+        <circle class="isp-map__svg-latent" cx="530" cy="475" r="26" />
+        <text class="isp-map__svg-latent-label" x="530" y="480">eps</text>
+        <path class="isp-map__svg-edge isp-map__svg-edge--generative" d="M 556 475 L 625 475" marker-end="url(#isp-map-arrow)" />
+        <g class="isp-map__svg-node isp-map__svg-node--generative" data-isp-select="generative" role="button" tabindex="0" aria-label="查看生成式论文">
+          <title>查看生成式论文</title>
+          <rect x="625" y="442" width="210" height="66" rx="7" />
+          <text x="730" y="469">q(Y | R,u)</text>
+          <text class="isp-map__svg-node-subtitle" x="730" y="491">diffusion / flow</text>
+        </g>
+        <path class="isp-map__svg-edge isp-map__svg-edge--generative" d="M 835 462 C 876 429, 891 370, 903 335" marker-end="url(#isp-map-arrow)" />
+      </g>
+
+      <g class="isp-map__svg-node isp-map__svg-node--output">
+        <rect x="824" y="248" width="206" height="82" rx="7" />
+        <text x="927" y="278">输出 Y-hat</text>
+        <text class="isp-map__svg-node-subtitle" x="927" y="301">点估计或条件样本</text>
+      </g>
+
+      <g class="isp-map__svg-route" data-isp-route="observation direct factorized generative task">
+        <path class="isp-map__svg-edge isp-map__svg-edge--supervision" d="M 895 118 L 895 156" marker-end="url(#isp-map-arrow-muted)" />
+        <path class="isp-map__svg-edge isp-map__svg-edge--supervision" d="M 927 248 L 927 208" marker-end="url(#isp-map-arrow-muted)" />
+        <g class="isp-map__svg-loss">
+          <rect x="812" y="156" width="166" height="52" rx="6" />
+          <text x="895" y="178">图像 / 分布 loss</text>
+          <text class="isp-map__svg-node-subtitle" x="895" y="195">training only</text>
+        </g>
+      </g>
+
+      <g class="isp-map__svg-route" data-isp-route="reverse">
+        <path class="isp-map__svg-edge isp-map__svg-edge--reverse" d="M 1005 330 L 1005 439" marker-end="url(#isp-map-arrow-muted)" />
+        <g class="isp-map__svg-node isp-map__svg-node--reverse" data-isp-select="reverse" role="button" tabindex="0" aria-label="查看 Reverse ISP 论文">
+          <title>查看 Reverse ISP 论文</title>
+          <rect x="928" y="439" width="152" height="62" rx="7" />
+          <text x="1004" y="465">R-hat</text>
+          <text class="isp-map__svg-node-subtitle" x="1004" y="486">q(R | Y,m)</text>
+        </g>
+        <path class="isp-map__svg-edge isp-map__svg-edge--reverse" d="M 928 470 C 820 545, 555 548, 450 118" marker-end="url(#isp-map-arrow-muted)" />
+      </g>
+
+      <g class="isp-map__svg-route" data-isp-route="task">
+        <path class="isp-map__svg-edge isp-map__svg-edge--task" d="M 455 118 C 390 280, 435 495, 530 574" marker-end="url(#isp-map-arrow)" />
+        <g class="isp-map__svg-node isp-map__svg-node--task-representation" data-isp-select="task" role="button" tabindex="0" aria-label="查看任务感知论文">
+          <title>查看任务感知论文</title>
+          <rect x="448" y="553" width="184" height="64" rx="7" />
+          <text x="540" y="579">任务表示 Z(R)</text>
+          <text class="isp-map__svg-node-subtitle" x="540" y="600">RAW bypass</text>
+        </g>
+        <path class="isp-map__svg-edge isp-map__svg-edge--task" d="M 632 585 L 752 585" marker-end="url(#isp-map-arrow)" />
+        <path class="isp-map__svg-edge isp-map__svg-edge--task" d="M 927 330 C 927 463, 894 526, 870 553" marker-end="url(#isp-map-arrow)" />
+        <g class="isp-map__svg-node isp-map__svg-node--task" data-isp-select="task" role="button" tabindex="0" aria-label="查看任务感知论文">
+          <title>查看任务感知论文</title>
+          <rect x="752" y="553" width="214" height="64" rx="7" />
+          <text x="859" y="579">任务头 G</text>
+          <text class="isp-map__svg-node-subtitle" x="859" y="600">human / detection / 3D</text>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <section class="isp-map__detail" aria-live="polite">
+    <div class="isp-map__panel is-active" id="isp-map-panel-overview" role="tabpanel" aria-labelledby="isp-map-tab-overview" data-isp-panel="overview">
+      <p class="isp-map__panel-kicker">Topology</p>
+      <p class="isp-map__panel-title">这是一张分叉、汇合与回路并存的图</p>
+      <p>场景同时生成 RAW 观测和参考目标；Forward ISP 在点估计、恢复/渲染分解、生成式三条<strong>替代</strong>路径中选择一种；Reverse ISP 是回到 RAW 域的旁路；任务也可以绕过 sRGB，直接读取 RAW 表示。</p>
+    </div>
+
+    <div class="isp-map__panel" id="isp-map-panel-observation" role="tabpanel" aria-labelledby="isp-map-tab-observation" data-isp-panel="observation" hidden>
+      <p class="isp-map__panel-kicker">Observation and data</p>
+      <p class="isp-map__panel-title">改变 p(R | X,m) 或训练联合分布</p>
+      <p>这一组不把 RAW 当作普通输入图像，而是关注 CFA、噪声、曝光、合成数据与 RAW 先验。点击论文名可打开原文。</p>
+      <p class="isp-map__paper-links">
+        <a href="https://research.nvidia.com/publication/2014-12_flexisp-flexible-camera-image-processing-framework" target="_blank" rel="noopener noreferrer" title="FlexISP: A Flexible Camera Image Processing Framework">FlexISP [1]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content_CVPR_2019/html/Brooks_Unprocessing_Images_for_Learned_Raw_Denoising_CVPR_2019_paper.html" target="_blank" rel="noopener noreferrer" title="Unprocessing Images for Learned Raw Denoising">Unprocessing [8]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content_CVPR_2020/html/Zamir_CycleISP_Real_Image_Restoration_via_Improved_Data_Synthesis_CVPR_2020_paper.html" target="_blank" rel="noopener noreferrer" title="CycleISP: Real Image Restoration via Improved Data Synthesis">CycleISP [9]</a><span aria-hidden="true"> · </span>
+        <a href="https://www.microsoft.com/en-us/research/publication/joint-demosaicing-and-denoising-via-learned-non-parametric-random-fields/" target="_blank" rel="noopener noreferrer" title="Joint Demosaicing and Denoising via Learned Non-parametric Random Fields">Learned Random Fields [13]</a><span aria-hidden="true"> · </span>
+        <a href="https://www.aimsciences.org/article/doi/10.3934/ipi.2023044" target="_blank" rel="noopener noreferrer" title="How to Best Combine Demosaicing and Denoising?">Demosaicing / Denoising Order [14]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2009.06205" target="_blank" rel="noopener noreferrer" title="Joint Demosaicking and Denoising Benefits from a Two-stage Training Strategy">Two-stage Training [15]</a><span aria-hidden="true"> · </span>
+        <a href="https://light.princeton.edu/publication/allyouneedisraw/" target="_blank" rel="noopener noreferrer" title="All You Need is RAW">All You Need Is RAW [24]</a>
+      </p>
+    </div>
+
+    <div class="isp-map__panel" id="isp-map-panel-direct" role="tabpanel" aria-labelledby="isp-map-tab-direct" data-isp-panel="direct" hidden>
+      <p class="isp-map__panel-kicker">Direct point estimation</p>
+      <p class="isp-map__panel-title">用一个前向函数近似 Bayes 决策</p>
+      <p>这条路径学习 <code>F(R) -> Y-hat</code>，通常对应 L1/L2 下的条件统计量。CNN、U-Net 与 Transformer 是这里的空间算子或隐式先验，不是额外的 ISP 串行阶段。</p>
+      <p class="isp-map__paper-links">
+        <a href="https://groups.csail.mit.edu/graphics/demosaicnet/" target="_blank" rel="noopener noreferrer" title="Deep Joint Demosaicking and Denoising">Deep Joint [2]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/1801.06724" target="_blank" rel="noopener noreferrer" title="DeepISP: Toward Learning an End-to-End Image Processing Pipeline">DeepISP [3]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/1805.01934" target="_blank" rel="noopener noreferrer" title="Learning to See in the Dark">SID / LSID [4]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content_CVPRW_2020/papers/w31/Ignatov_Replacing_Mobile_Camera_ISP_With_a_Single_Deep_Learning_Model_CVPRW_2020_paper.pdf" target="_blank" rel="noopener noreferrer" title="Replacing Mobile Camera ISP with a Single Deep Learning Model">PyNET / RISP [5]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/1505.04597" target="_blank" rel="noopener noreferrer" title="U-Net: Convolutional Networks for Biomedical Image Segmentation">U-Net [11]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2108.10257" target="_blank" rel="noopener noreferrer" title="SwinIR: Image Restoration Using Swin Transformer">SwinIR [27]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2106.03106" target="_blank" rel="noopener noreferrer" title="Uformer: A General U-Shaped Transformer for Image Restoration">Uformer [28]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2111.09881" target="_blank" rel="noopener noreferrer" title="Restormer: Efficient Transformer for High-Resolution Image Restoration">Restormer [29]</a>
+      </p>
+    </div>
+
+    <div class="isp-map__panel" id="isp-map-panel-factorized" role="tabpanel" aria-labelledby="isp-map-tab-factorized" data-isp-panel="factorized" hidden>
+      <p class="isp-map__panel-kicker">Factorized pipeline</p>
+      <p class="isp-map__panel-title">把恢复与渲染写成不同的条件分布</p>
+      <p>这条路径假设 <code>p(Y,S | R) = p(Y | S)p(S | R)</code>。中间变量 S 不是“多一个网络层”，而是可辨识性、信息保留和模块约束的来源；PnP、RED 与 DIP 主要对应其中的恢复推理。</p>
+      <p class="isp-map__paper-links">
+        <a href="https://arxiv.org/abs/1908.01481" target="_blank" rel="noopener noreferrer" title="CameraNet: A Two-Stage Framework for Effective Camera ISP Learning">CameraNet [6]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content/ICCV2021/papers/Yu_ReconfigISP_Reconfigurable_Camera_Image_Processing_Pipeline_ICCV_2021_paper.pdf" target="_blank" rel="noopener noreferrer" title="ReconfigISP: Reconfigurable Camera Image Processing Pipeline">ReconfigISP [7]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2206.08488" target="_blank" rel="noopener noreferrer" title="Controllable Image Enhancement">Controllable Enhancement [12]</a><span aria-hidden="true"> · </span>
+        <a href="https://docs.lib.purdue.edu/ecetr/448/" target="_blank" rel="noopener noreferrer" title="Plug-and-Play Priors for Model Based Reconstruction">Plug-and-Play [16]</a><span aria-hidden="true"> · </span>
+        <a href="https://epubs.siam.org/doi/10.1137/16M1102884" target="_blank" rel="noopener noreferrer" title="RED [Regularization by Denoising]">RED [17]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2008.00226" target="_blank" rel="noopener noreferrer" title="Regularization by Denoising via Fixed-Point Projection">RED-PRO [18]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content_cvpr_2018/html/Ulyanov_Deep_Image_Prior_CVPR_2018_paper.html" target="_blank" rel="noopener noreferrer" title="Deep Image Prior">Deep Image Prior [19]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2008.13751" target="_blank" rel="noopener noreferrer" title="Plug-and-Play Image Restoration with Deep Denoiser Prior">DPIR [20]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2201.03210" target="_blank" rel="noopener noreferrer" title="Model-Based Image Signal Processors via Learnable Dictionaries">Learnable Dictionaries [21]</a>
+      </p>
+    </div>
+
+    <div class="isp-map__panel" id="isp-map-panel-generative" role="tabpanel" aria-labelledby="isp-map-tab-generative" data-isp-panel="generative" hidden>
+      <p class="isp-map__panel-kicker">Conditional distribution</p>
+      <p class="isp-map__panel-title">从一个点输出，转向完整的 q(Y | R,u)</p>
+      <p>Diffusion 学 score，Flow Matching 学概率路径的 velocity。它们可以共享 U-Net 或 Transformer 骨干；差别在于学习的随机过程，不在于“又多了一个串行模块”。</p>
+      <p class="isp-map__paper-links">
+        <a href="https://arxiv.org/abs/2006.11239" target="_blank" rel="noopener noreferrer" title="Denoising Diffusion Probabilistic Models">DDPM [30]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2011.13456" target="_blank" rel="noopener noreferrer" title="Score-Based Generative Modeling through Stochastic Differential Equations">Score SDE [31]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2201.11793" target="_blank" rel="noopener noreferrer" title="Denoising Diffusion Restoration Models">DDRM [32]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2209.14687" target="_blank" rel="noopener noreferrer" title="Diffusion Posterior Sampling for General Noisy Inverse Problems">DPS [33]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2210.02747" target="_blank" rel="noopener noreferrer" title="Flow Matching for Generative Modeling">Flow Matching [34]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2209.03003" target="_blank" rel="noopener noreferrer" title="Rectified Flow">Rectified Flow [35]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2302.00482" target="_blank" rel="noopener noreferrer" title="Improving and Generalizing Flow-Based Generative Models with Minibatch Optimal Transport">Minibatch OT / CFM [36]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2503.19283" target="_blank" rel="noopener noreferrer" title="ISPDiffuser: Learning RAW-to-sRGB Mappings with Texture-Aware Diffusion Models and Histogram-Guided Color Consistency">ISPDiffuser [37]</a>
+      </p>
+    </div>
+
+    <div class="isp-map__panel" id="isp-map-panel-reverse" role="tabpanel" aria-labelledby="isp-map-tab-reverse" data-isp-panel="reverse" hidden>
+      <p class="isp-map__panel-kicker">Reverse conditional</p>
+      <p class="isp-map__panel-title">RGB-to-RAW 是后验估计，不是普通反函数</p>
+      <p>标准 ISP 含量化、裁剪、tone mapping 与压缩，通常不可逆。Reverse ISP 因而是一条为数据合成、循环一致性和信息保留服务的旁路。</p>
+      <p class="isp-map__paper-links">
+        <a href="https://openaccess.thecvf.com/content_CVPR_2019/html/Brooks_Unprocessing_Images_for_Learned_Raw_Denoising_CVPR_2019_paper.html" target="_blank" rel="noopener noreferrer" title="Unprocessing Images for Learned Raw Denoising">Unprocessing [8]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content_CVPR_2020/html/Zamir_CycleISP_Real_Image_Restoration_via_Improved_Data_Synthesis_CVPR_2020_paper.html" target="_blank" rel="noopener noreferrer" title="CycleISP: Real Image Restoration via Improved Data Synthesis">CycleISP [9]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content/CVPR2021/papers/Xing_Invertible_Image_Signal_Processing_CVPR_2021_paper.pdf" target="_blank" rel="noopener noreferrer" title="Invertible Image Signal Processing">InvISP [10]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2411.13150" target="_blank" rel="noopener noreferrer" title="RAW-Diffusion: RGB-Guided Diffusion Models for High-Fidelity RAW Image Generation">RAW-Diffusion [38]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2601.20364" target="_blank" rel="noopener noreferrer" title="RAW-Flow: Advancing RGB-to-RAW Image Reconstruction with Deterministic Latent Flow Matching">RAW-Flow [39]</a>
+      </p>
+    </div>
+
+    <div class="isp-map__panel" id="isp-map-panel-task" role="tabpanel" aria-labelledby="isp-map-tab-task" data-isp-panel="task" hidden>
+      <p class="isp-map__panel-kicker">Task-aware decision</p>
+      <p class="isp-map__panel-title">任务不一定需要一张“最好看”的 sRGB</p>
+      <p>任务感知 ISP 可以让输出图像进入任务头，也可以从 RAW 直接学习任务充分表示。它改变的是消费者和损失函数，而不仅是前端网络。</p>
+      <p class="isp-map__paper-links">
+        <a href="https://arxiv.org/abs/1911.05931" target="_blank" rel="noopener noreferrer" title="VisionISP: Repurposing the Image Signal Processor for Computer Vision Applications">VisionISP [22]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/1911.07954" target="_blank" rel="noopener noreferrer" title="ISP4ML: The Role of Image Signal Processing in Efficient Deep Learning Vision Systems">ISP4ML [23]</a><span aria-hidden="true"> · </span>
+        <a href="https://light.princeton.edu/publication/hil_image_optimization/" target="_blank" rel="noopener noreferrer" title="Hardware-in-the-loop End-to-end Optimization of Camera Image Processing Pipelines">Hardware-in-the-loop [25]</a><span aria-hidden="true"> · </span>
+        <a href="https://light.princeton.edu/publication/neural_auto_exposure/" target="_blank" rel="noopener noreferrer" title="Neural Auto-Exposure for High-Dynamic Range Object Detection">Neural Auto-Exposure [26]</a>
+      </p>
+    </div>
+  </section>
+
+  <figcaption id="isp-map-caption">
+    <b>图 1:</b> Learned ISP 的非串行拓扑。实线表示运行时推断，灰色虚线表示只在训练中出现的参考目标与监督，红色虚线表示 reverse ISP；点击彩色节点或上方视角可查看对应理论角色与论文。
+  </figcaption>
+</figure>
+
+<script>
+  (function () {
+    function initIspMaps() {
+      document.querySelectorAll('[data-isp-map]').forEach(function (map) {
+        map.dataset.ispReady = 'true';
+        var controls = Array.from(map.querySelectorAll('[data-isp-lens]'));
+        var panels = Array.from(map.querySelectorAll('[data-isp-panel]'));
+        var selectableNodes = Array.from(map.querySelectorAll('[data-isp-select]'));
+
+        function activate(lens) {
+          map.dataset.activeLens = lens;
+          controls.forEach(function (control) {
+            var active = control.dataset.ispLens === lens;
+            control.classList.toggle('is-active', active);
+            control.setAttribute('aria-selected', String(active));
+            control.tabIndex = active ? 0 : -1;
+          });
+          panels.forEach(function (panel) {
+            var active = panel.dataset.ispPanel === lens;
+            panel.classList.toggle('is-active', active);
+            panel.hidden = !active;
+          });
+        }
+
+        controls.forEach(function (control) {
+          control.addEventListener('click', function () {
+            activate(control.dataset.ispLens);
+          });
+          control.addEventListener('keydown', function (event) {
+            var index = controls.indexOf(control);
+            var nextIndex = null;
+            if (event.key === 'ArrowRight') nextIndex = (index + 1) % controls.length;
+            if (event.key === 'ArrowLeft') nextIndex = (index - 1 + controls.length) % controls.length;
+            if (event.key === 'Home') nextIndex = 0;
+            if (event.key === 'End') nextIndex = controls.length - 1;
+            if (nextIndex !== null) {
+              event.preventDefault();
+              controls[nextIndex].focus();
+              activate(controls[nextIndex].dataset.ispLens);
+            }
+          });
+        });
+
+        selectableNodes.forEach(function (node) {
+          function selectNode() {
+            activate(node.dataset.ispSelect);
+          }
+          node.addEventListener('click', selectNode);
+          node.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              selectNode();
+            }
+          });
+        });
+
+        activate(map.dataset.activeLens || 'overview');
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initIspMaps);
+    } else {
+      initIspMaps();
+    }
+  }());
+</script>

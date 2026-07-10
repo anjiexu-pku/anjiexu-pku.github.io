@@ -24,6 +24,12 @@
 <meta name="theme-color" content="#ffffff">
 <link rel="stylesheet" href="{{ base_path }}/assets/css/academicons.css"/>
 <link rel="stylesheet" href="{{ base_path }}/assets/css/lean-highlight.css"/>
+{% if page.custom_css %}
+  {% for stylesheet in page.custom_css %}
+{% capture custom_css_path %}/assets/css/{{ stylesheet }}.css{% endcapture %}
+<link rel="stylesheet" href="{{ custom_css_path | relative_url }}"/>
+  {% endfor %}
+{% endif %}
 
 
 <!-- Support for MatJax -->
