@@ -10,6 +10,18 @@ tags:
   - deep-learning
 ---
 
+<style>
+.page__content a {
+  overflow-wrap: anywhere;
+}
+.page__content mjx-container[display="true"] {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.15rem;
+}
+</style>
+
 我们平时说“相机拍了一张照片”, 这句话其实省略了太多东西。传感器并不会直接给出一张好看的 RGB 图片。它最初得到的是 RAW: 线性的、带噪声的、经过 CFA 马赛克采样的传感器读数。我们最终看到的 sRGB/JPEG, 则是经过一整套 ISP, Image Signal Processing pipeline, 之后的结果。
 
 所以 learned ISP 要回答的问题不是“能不能用神经网络修图”, 而是:
@@ -376,6 +388,81 @@ $$
 
 这个形式也解释了为什么不同论文看起来都在做 RAW-to-RGB, 但实际不是同一个问题。只要 $u$、$\ell$、训练数据分布或目标 $Y$ 不同, 学到的 ISP 就不是同一个 ISP。
 
+## 一张架构图: 论文究竟在改什么
+
+到这里, 我们已经有足够的符号把整篇文章压到一张图里。图的主干不是某一篇论文的网络, 而是 learned ISP 的问题架构: 上方是数据如何由相机产生, 中间是系统如何推断和渲染, 下方是输出最终为谁服务。主干旁的虚线卡片表示各组论文主要修改哪个数学对象。
+
+<figure>
+  <a href="{{ '/images/learned-isp-research-map.svg' | relative_url }}">
+    <img src="{{ '/images/learned-isp-research-map.svg' | relative_url }}" alt="Learned ISP 的统一问题架构与相关论文定位图">
+  </a>
+  <figcaption><b>图 1:</b> Learned ISP 的问题架构。实线表示从场景观测到恢复、渲染和任务输出的数据流; 虚线连接的卡片表示论文主要改变的建模位置, 其中 reverse ISP 以 p(R | Y) 返回 RAW 空间。同一篇论文可以同时落在多个位置, 因为它可能同时改变数据、函数族和目标。</figcaption>
+</figure>
+
+这条主干可以写成一个生成过程和一个推断过程。生成侧是:
+
+$$
+R\sim p_{\psi}(r\mid X,m),
+\qquad
+Y=\rho_u(X),
+$$
+
+其中 $X$ 是不可见场景, $m$ 是曝光、增益、CFA 和传感器参数, $u$ 是渲染风格或任务条件。推断侧可以分解为:
+
+$$
+S\sim q_{\theta_r,\mathcal{A}_r}(s\mid R,m),
+\qquad
+\hat{Y}\sim q_{\theta_e,\mathcal{A}_e}(y\mid S,u),
+\qquad
+\hat{T}=G_{\omega}(\hat{Y}).
+$$
+
+$S$ 是恢复后的线性场景或中间表示, $\mathcal{A}_r,\mathcal{A}_e$ 是网络或模块架构。确定性 CNN 并没有离开这个概率形式; 它只是把条件分布限制成集中在一个点上的退化分布:
+
+$$
+q_{\theta}(y\mid r)
+=
+\delta\!\left(y-F_{\theta}(r)\right).
+$$
+
+相反, diffusion 和 flow matching 试图保留一个非退化的 $q_{\theta}(Y\mid R)$, 因而能够表达同一份 RAW 对应多种合理渲染的情况。
+
+训练时, 这些方法大体都在下面的目标中选择不同的项:
+
+$$
+\begin{aligned}
+\min_{\mathcal{A},\theta,\omega,\psi}
+\mathbb{E}
+\Big[
+&\lambda_{img}\ell_{img}(\hat{Y},Y)
++\lambda_{phys}\ell_{phys}(\hat{Y},R;p_{\psi})
+\\
+&+\lambda_{dist}D\!\left(
+q_{\theta,\mathcal{A}}(Y\mid R,u),
+p(Y\mid R,u)
+\right)
+\\
+&+\lambda_{task}\ell_{task}(G_{\omega}(\hat{Y}),T)
+\Big]
++\lambda_C C(\mathcal{A}).
+\end{aligned}
+$$
+
+这里的五个损失项分别约束图像保真、物理测量一致性、条件分布、下游任务和计算成本。于是, 论文的重点可以按图中的位置来读:
+
+| 图中位置 | 代表工作 | 数学上主要改变什么 |
+| --- | --- | --- |
+| 观测与训练数据 $p_{\psi}(R\mid X,m)$ | FlexISP、Unprocessing、CycleISP、RAW prior [1,8,9,13-15,24] | 显式写入 CFA、噪声和相机 forward model, 或构造更可信的 RAW/RGB 联合分布 |
+| 恢复后验 $q(S\mid R,m)$ | Deep Joint、SID/LSID、PnP/RED/DIP [2,4,16-20] | 用解析先验或摊销网络求解去噪、去马赛克和低光恢复 |
+| 函数族与中间分解 $\mathcal{F}_{\mathcal{A}}$ | DeepISP、PyNET、CameraNet、ReconfigISP、InvISP、Learnable Dictionary [3,5-7,10,21] | 选择端到端、两阶段、可重构或可逆结构, 从而改变可辨识性、信息保留和计算成本 |
+| 空间算子 $F_{\theta}$ | U-Net、SwinIR、Uformer、Restormer [11,27-29] | 用局部多尺度卷积或非局部注意力参数化恢复器、渲染器、score 或 velocity |
+| 条件分布与反向 ISP | Diffusion、DPS、Flow Matching、ISPDiffuser、RAW-Diffusion、RAW-Flow [30-39] | 从单点回归转向 $p(Y\mid R)$、$p(R\mid Y)$ 或两种分布之间的概率输运 |
+| 消费者、损失与成本 $G_{\omega},\ell,C$ | VisionISP、ISP4ML、HIL、Neural Auto-Exposure [22,23,25,26] | 把最优输出从“好看的照片”改成任务充分表示, 并联合优化硬件代价 |
+
+这个定位还澄清了两个容易混淆的概念。SwinIR、Uformer 和 Restormer 首先是图像恢复的空间算子, 它们本身没有定义 RAW 的传感器似然或最终渲染目标; [30-36] 首先是 diffusion、逆问题采样和 flow matching 的数学基础, 也不是完整的相机 ISP。只有当这些算子或概率过程与 RAW 条件、目标图像和损失函数结合时, 它们才成为 learned ISP 系统的一部分。
+
+更重要的是, CNN/Transformer 与 diffusion/flow matching 并不是同一层级的四个互斥选项。前两者主要定义“用什么空间算子表示函数”, 后两者主要定义“要学习哪一种概率过程”。一个 diffusion ISP 完全可以用 U-Net 或 Transformer 作为 score network; flow matching 的 velocity network 也一样。后面讨论 architecture 时, 我们会一直沿用这两个正交坐标。
+
 ## 为什么恢复和增强应该分开
 
 传统 ISP 中的操作可以粗略分成两类。
@@ -568,9 +655,9 @@ $$
 
 这也是为什么 learned ISP 不应该被粗暴理解为“用一个大网络替代所有相机工程”。更好的问题是: 哪些结构先验应该保留, 哪些步骤应该学习, 哪些目标应该显式条件化?
 
-## 文献脉络: 它们其实在改变同一个优化问题
+## 沿着架构图读文献
 
-把相关工作放在同一个数学框架里, 会比按年代列论文更清楚。
+现在可以沿着图 1 从上到下读相关工作。下面保留每篇论文的具体问题, 但不再把它们看成一串彼此独立的网络: 每一项贡献都对应观测模型、恢复后验、渲染决策、结构约束或任务风险中的某个变化。
 
 ### FlexISP: 从串联流程到联合优化
 
@@ -1024,19 +1111,7 @@ $$
 
 如果损失是 L1, 它更接近条件中位数。如果损失包含 perceptual loss、GAN loss 或下游 task loss, 那么网络逼近的就不再是“物理真实图像”的后验均值, 而是某个评价系统偏好的 Bayes 决策。这一点解释了为什么不同 learned ISP 论文看似都在做 RAW-to-RGB, 实际学到的东西却很不一样。
 
-可以把这些论文放进下面这张对应表:
-
-| 方法类型 | 深度学习论文在做什么 | 理论上改动了哪一项 |
-| --- | --- | --- |
-| Deep Joint Demosaicking and Denoising | 用 CNN 直接从 noisy mosaic RAW 估计 clean RGB | 把 demosaicing 与 denoising 的联合后验 $p(x\mid r)$ 摊销成一次前向传播; 隐式学习联合先验 $\Phi_\theta$ |
-| DeepISP / LSID | 从低光 RAW 直接输出目标 RGB 或长曝光效果 | 学习 $\mathbb{E}[Y\mid R=r]$ 或相应 Bayes 决策; 数据中的曝光、噪声和参考图决定了目标变量 $S$ |
-| RISP / PyNET | 把手机 RAW 映射到 DSLR 风格 RGB | 改变目标分布 $T$: 不是恢复物理真实, 而是学习跨设备、跨风格的条件映射 |
-| CameraNet | 分成 restoration 与 enhancement 两阶段 | 在结构上引入潜变量 $S$, 近似 $p(y,s\mid r)=p(y\mid s)p(s\mid r)$, 降低不可辨识性 |
-| ReconfigISP | 搜索模块、参数和连接方式 | 不只学习参数 $\theta$, 还学习假设空间 $\mathcal{F}_\alpha$, 同时加入成本约束 $C(\alpha,\phi)$ |
-| Unprocessing / CycleISP | 学习或近似 sRGB-to-RAW 与 RAW-to-sRGB 的循环 | 把不可逆的 $p(r\mid y)$ 写成带先验的后验估计, 用循环一致性约束可行解 |
-| InvISP | 设计可逆 RAW-to-RGB 映射 | 直接改变函数族: 要求 $f_\theta$ 是双射, 用结构约束减少信息丢失 |
-| Model-Based ISP with Learnable Dictionaries | 保留可解释 ISP 模块, 学习模块参数字典 | 在端到端学习和物理模块之间折中: 缩小 $\mathcal{F}$, 换取可逆性、可解释性和少样本泛化 |
-| VisionISP / ISP4ML / HIL ISP / Neural Auto-Exposure | 为检测、分类等下游任务优化 ISP 或曝光 | 改变损失函数 $\ell$ 和输出变量 $u$: ISP 不再为人眼图像质量服务, 而为任务风险服务 |
+把这些论文放回图 1, 它们并不是在竞争同一个“最佳网络”。Deep Joint、DeepISP 和 LSID 主要把逐图优化摊销成前向推断; CameraNet、ReconfigISP 和 InvISP 改变中间分解或函数族; RISP/PyNET 与 task-aware 方法则改变监督目标和最终消费者。前面的表给出位置, 下面进一步解释它们在这些位置上扮演的理论角色。
 
 所以, 深度学习方法大致可以分成四种理论角色。
 
@@ -1455,18 +1530,18 @@ $$
 
 当我们说某个 neural ISP 结构有效时, 更准确的说法应该是: 它选择的函数族 $\mathcal{F}_A$ 与这个成像任务的观测模型、先验、损失函数和计算约束更匹配。
 
-### CNN、Transformer、Diffusion、Flow Matching: 它们到底在建模什么?
+### CNN、Transformer、Diffusion、Flow Matching: 两条正交的建模轴
 
-进一步说, CNN、Transformer、Diffusion 和 Flow Matching 不只是四种“网络架构”。它们在数学上对应的是四种不同的建模对象:
+图 1 暴露了一个关键区别: CNN 和 Transformer 主要是空间函数的参数化方式, diffusion 和 flow matching 主要是条件分布的学习方式。把四者放在一条“架构升级路线”上并不准确。更合适的分类是:
 
-| 方法 | 数学对象 | 在 learned ISP 中的角色 |
-| --- | --- | --- |
-| CNN / U-Net | 局部、平移等变的确定性算子 | 快速近似 MAP/MMSE, 适合去噪、去马赛克和局部恢复 |
-| Transformer | 内容自适应的非局部核 | 建模全局颜色、长程依赖、自相似纹理和场景条件 |
-| Diffusion | 条件分布的 score / reverse process | 从 $p(Y\mid R)$ 采样, 处理多解、纹理和感知质量 |
-| Flow Matching | 条件分布之间的连续输运 ODE | 学习 RAW/RGB/latent 之间的向量场, 更像快速可控的生成式域变换 |
+| 建模层级 | 选择 | 数学对象 | 在 learned ISP 中的角色 |
+| --- | --- | --- | --- |
+| 空间算子 | CNN / U-Net | 局部、平移等变的多尺度算子 | 参数化恢复器、渲染器、score 或 velocity |
+| 空间算子 | Transformer | 内容自适应的非局部核 | 参数化全局颜色、长程依赖、自相似纹理和场景条件 |
+| 推断语义 | Diffusion | 条件分布的 score / reverse process | 从 $p(Y\mid R)$ 采样, 表达多解、纹理和感知质量 |
+| 推断语义 | Flow Matching | 条件分布之间的连续输运 ODE | 学习 RAW/RGB/latent 之间的向量场和概率路径 |
 
-这四者的区别, 可以从同一个问题出发:
+这两条轴可以从同一个问题出发:
 
 $$
 R \sim p(r\mid S),
@@ -1487,7 +1562,7 @@ $$
 ].
 $$
 
-不同结构的差别在于: 它们用什么方式近似 $\delta^\star(r)$ 或 $p(Y\mid R=r)$。
+空间算子决定如何参数化 $F_\theta$、score 或 velocity; 推断语义决定模型最终近似点决策 $\delta^\star(r)$, 还是完整条件分布 $p(Y\mid R=r)$。
 
 #### CNN / U-Net: 局部 Markov 先验和快速摊销推理
 
@@ -1873,81 +1948,59 @@ $$
 
 也就是说, Flow Matching 给了我们一个非常漂亮的数学语言: ISP 不只是函数拟合, 也可以是从一个条件分布到另一个条件分布的输运问题。
 
-#### 这四类结构怎么选择?
+#### 两条轴如何组合?
 
-如果把 learned ISP 目标写成:
-
-$$
-\hat{y}
-\sim
-p_\theta(Y\mid R=r),
-$$
-
-那么四种结构对应四种近似层级:
-
-| 结构 | 近似对象 | 适合场景 | 主要风险 |
-| --- | --- | --- | --- |
-| CNN / U-Net | Bayes 点估计 $\delta^\star(r)$ | 实时 ISP、去噪、去马赛克、移动端 | 全局语义和长程依赖弱 |
-| Transformer | 内容自适应点估计或表示 | 全局颜色、HDR、复杂纹理、任务感知前端 | 算力高, 数据需求大 |
-| Diffusion | 条件后验 $p(Y\mid R)$ | 多解渲染、低光细节、感知质量、逆问题采样 | 慢, 可能幻觉, 需要物理约束 |
-| Flow Matching | 条件分布输运 ODE | 快速生成式 ISP、RAW/RGB latent translation、reverse ISP | coupling 选择敏感, 多解性需额外建模 |
-
-因此, 这几类方法不是简单的竞品关系。更像是不同层级的理论选择:
+一个具体模型其实是三个选择的乘积:
 
 $$
-\text{CNN}
-\rightarrow
-\text{Transformer}
-\rightarrow
-\text{Diffusion}
-\rightarrow
-\text{Flow Matching}
-$$
-
-并不是越往右越好, 而是建模对象越来越从“点估计”走向“分布输运”。如果目标是手机相机实时出图, CNN/U-Net 或轻量 Transformer 可能最合适; 如果目标是低光照片的感知质量, diffusion 更有意义; 如果目标是 RGB-to-RAW、RAW-to-sRGB 的生成式域转换, flow matching 会变得非常自然。
-
-把它压缩成一句话:
-
-> CNN 和 Transformer 主要在学习 $F_\theta:R\mapsto Y$; Diffusion 在学习 $p_\theta(Y\mid R)$; Flow Matching 在学习把一个条件分布连续运输到另一个条件分布的向量场。
-
-## 一个统一形式
-
-这些工作表面上差异很大, 但可以统一成:
-
-$$
-\hat{F}
+\text{learned ISP}
 =
-\arg\min_{F\in\mathcal{F}}
-\mathbb{E}_{(R,T)}
-\left[
-\mathcal{L}
-\left(
-A_{\tau}(F(R)), T
-\right)
-\right]
-+
-\lambda \Omega(F).
+\underbrace{\text{inference semantics}}_{\text{regression / diffusion / flow}}
+\times
+\underbrace{\text{spatial operator}}_{\text{CNN / Transformer / hybrid}}
+\times
+\underbrace{\text{pipeline factorization}}_{\text{one-stage / two-stage / invertible}}.
 $$
 
-其中:
+因此应该先问输出需要一个点, 还是一个分布, 再选择实现它的空间算子:
 
-- $R$ 是 RAW 或中间图像;
-- $F$ 是 ISP, 可以是端到端网络、两阶段网络、模块图、可逆网络或传统优化管线;
-- $\mathcal{F}$ 是假设空间, 决定可解释性和表达能力;
-- $A_{\tau}$ 是任务头, 可以是显示、JPEG 压缩、检测器、分割器或评价模型;
-- $T$ 是目标, 可以是长曝光图、DSLR 图、人类 retouch 图或任务标签;
-- $\mathcal{L}$ 定义什么叫好;
-- $\Omega(F)$ 约束速度、可逆性、平滑性、模块成本、颜色一致性或硬件实现。
+| 先做的决定 | 可选形式 | 适合场景 | 主要风险 |
+| --- | --- | --- | --- |
+| 输出是点估计 | L1/L2 regression, MAP/MMSE 近似 | 实时 ISP、去噪、去马赛克、移动端 | 多解被平均, 感知细节可能偏软 |
+| 输出是条件分布 | Diffusion / score model | 多风格渲染、低光细节、逆问题后验采样 | 采样慢, 需要物理约束抑制幻觉 |
+| 输出是概率输运 | Flow Matching / rectified flow | 快速生成式 ISP、RAW/RGB latent translation | coupling 决定学到哪种对应关系 |
+| 空间算子偏局部 | CNN / U-Net | CFA 邻域、纹理恢复、有限算力 | 全局曝光和长程依赖表达较弱 |
+| 空间算子偏非局部 | Transformer / hybrid | 全局颜色、HDR、重复纹理、场景条件 | 显存、算力和数据需求更高 |
 
-于是 learned ISP 的关键选择不是“用哪个网络”, 而是五个问题:
+例如, ISPDiffuser 的“diffusion”决定它学习条件 score, 但 score network 仍然需要某种 U-Net、Transformer 或混合骨干; RAW-Flow 的“flow matching”决定 velocity 的训练目标, 但 $v_\theta$ 同样要由空间网络参数化。手机实时出图可以选择 regression + lightweight CNN, 多解的感知渲染可以选择 diffusion + U-Net, reverse ISP 则可能选择 flow matching + Transformer。它们是组合关系, 不是一条从旧到新的替代链。
 
-1. 输入域是什么: RAW、packed RAW、linear RGB, 还是 sRGB?
-2. 目标是什么: 保真、好看、像某个相机, 还是有利于下游任务?
-3. 损失函数是什么: L1/L2、perceptual、GAN、task loss, 还是 NLL?
-4. 结构先验是什么: 端到端、两阶段、模块化、可逆, 还是可重构?
-5. 数据分布是什么: 哪个传感器、哪个镜头、哪个曝光范围、哪个 ISP 风格?
+## 如何用这张图读一篇新论文
 
-如果不回答这些问题, “深度学习建模 ISP”就会变成一句空话。
+有了图 1, 一篇 learned ISP 论文可以被压缩成一个建模坐标:
+
+$$
+\mathcal{P}_{paper}
+=
+\left(
+p_{\psi}(R\mid X,m),
+\mathcal{A},
+q_{\theta}(Y\mid R,u),
+Y,
+\ell,
+C
+\right).
+$$
+
+它依次记录观测与数据模型、计算架构、推断对象、监督目标、决策损失和系统成本。所谓论文贡献, 通常就是改变这个六元组中的一项或几项。读一篇新工作时, 可以直接追问:
+
+1. 输入真的是 sensor RAW, 还是 unprocessed/synthetic RAW? 这决定 $p_{\psi}$ 是否可信。
+2. 输出是点估计 $F_\theta(R)$、条件分布 $q_\theta(Y\mid R)$, 还是 reverse conditional $q_\theta(R\mid Y)$?
+3. CNN/Transformer 改变的是空间算子, 还是作者还同时改变了中间变量和 pipeline factorization?
+4. 目标 $Y$ 是物理参考、长曝光、DSLR 风格、人工 retouch, 还是任务标签?
+5. loss 在奖励保真、感知真实性、分布匹配还是下游准确率? 这些目标是否互相冲突?
+6. 性能提升来自更合适的数学假设, 还是参数量、训练数据、算力或采样步数的增加?
+
+如果一篇论文无法回答这些问题, 那么“更好的 architecture”往往只是一个不完整的结论。反过来, 一旦能指出它修改了图中的哪一块, 不同方法就有了可比较的共同坐标。
 
 ## 我得到的结论
 
@@ -1965,7 +2018,7 @@ $$
 
 第七, 网络结构不是附属实现细节。U-Net、pyramid、two-stage、cycle、invertible、reconfigurable 或 task-aware modulation, 都是在选择不同的函数族 $\mathcal{F}_A$。它们把多尺度性、潜变量分解、信息保留、可逆性、任务条件化和硬件成本写进 learned ISP 的假设空间。换结构, 本质上是在换一种隐式先验。
 
-第八, CNN、Transformer、Diffusion 和 Flow Matching 对 learned ISP 的建模层级不同。CNN/U-Net 更像快速的 Bayes 点估计; Transformer 把处理规则变成内容自适应的非局部核; Diffusion 建模条件后验 $p(Y\mid R)$; Flow Matching 则把 RAW、RGB 或 latent 表示之间的关系写成连续分布输运。它们不是简单替代关系, 而是在点估计、条件分布和概率流之间选择不同数学对象。
+第八, CNN/Transformer 与 Diffusion/Flow Matching 属于两条正交轴。CNN 和 Transformer 参数化空间算子; diffusion 与 flow matching 定义条件分布的 score 或 velocity 怎样被学习。一个生成式 ISP 仍然需要前者作为骨干, 因而完整模型是推断语义、空间算子和 pipeline factorization 的组合, 不是四种架构的线性替代。
 
 如果把这篇文章压缩成一句话, 我会写:
 
