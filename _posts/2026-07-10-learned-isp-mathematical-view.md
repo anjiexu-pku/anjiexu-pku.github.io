@@ -1455,6 +1455,461 @@ $$
 
 当我们说某个 neural ISP 结构有效时, 更准确的说法应该是: 它选择的函数族 $\mathcal{F}_A$ 与这个成像任务的观测模型、先验、损失函数和计算约束更匹配。
 
+### 11.9 CNN、Transformer、Diffusion、Flow Matching: 它们到底在建模什么?
+
+进一步说, CNN、Transformer、Diffusion 和 Flow Matching 不只是四种“网络架构”。它们在数学上对应的是四种不同的建模对象:
+
+| 方法 | 数学对象 | 在 learned ISP 中的角色 |
+| --- | --- | --- |
+| CNN / U-Net | 局部、平移等变的确定性算子 | 快速近似 MAP/MMSE, 适合去噪、去马赛克和局部恢复 |
+| Transformer | 内容自适应的非局部核 | 建模全局颜色、长程依赖、自相似纹理和场景条件 |
+| Diffusion | 条件分布的 score / reverse process | 从 $p(Y\mid R)$ 采样, 处理多解、纹理和感知质量 |
+| Flow Matching | 条件分布之间的连续输运 ODE | 学习 RAW/RGB/latent 之间的向量场, 更像快速可控的生成式域变换 |
+
+这四者的区别, 可以从同一个问题出发:
+
+$$
+R \sim p(r\mid S),
+\qquad
+Y \sim p(y\mid S,u),
+$$
+
+其中 $R$ 是 RAW 观测, $S$ 是不可见场景状态, $u$ 是渲染风格、相机偏好或任务目标。learned ISP 想得到的不是一个抽象的“好图像”, 而是某个条件决策:
+
+$$
+\delta^\star(r)
+=
+\arg\min_{\hat{y}}
+\mathbb{E}
+[
+\ell(\hat{y},Y)
+\mid R=r
+].
+$$
+
+不同结构的差别在于: 它们用什么方式近似 $\delta^\star(r)$ 或 $p(Y\mid R=r)$。
+
+#### CNN / U-Net: 局部 Markov 先验和快速摊销推理
+
+CNN 的基本算子是卷积:
+
+$$
+h_{l+1}(p)
+=
+\sigma
+\left(
+\sum_{q\in\mathcal{K}}
+W_l(q)h_l(p+q)
++b_l
+\right).
+$$
+
+这个形式有两个很强的先验。
+
+第一, 它是局部的。输出 $h_{l+1}(p)$ 主要依赖邻域 $\mathcal{N}(p)$。这和许多 ISP 子问题吻合: demosaicing 看 Bayer 邻域, denoising 看局部纹理与边缘, sharpening 看局部频率。
+
+第二, 它是平移等变的:
+
+$$
+F(T_aR)
+=
+T_aF(R).
+$$
+
+也就是说, 同一种边缘、纹理和 CFA pattern 无论出现在图像哪个位置, 处理规则都应相同。这对传感器网格上的局部恢复非常合理。
+
+从先验角度看, CNN 很像在学习一个局部能量函数或局部后验估计:
+
+$$
+\Phi(x)
+\approx
+\sum_p
+\phi_\theta(x_{\mathcal{N}(p)}),
+$$
+
+并把逐图优化:
+
+$$
+\hat{x}
+=
+\arg\min_x
+\|MAx-r\|^2
++
+\lambda\Phi(x)
+$$
+
+摊销成一次前向传播:
+
+$$
+\hat{x}
+\approx
+F_\theta(r).
+$$
+
+U-Net 在 CNN 上加了多尺度 encoder-decoder 和 skip connection。它并没有改变“局部恢复”的根基, 但补上了 CNN 原本较弱的全局上下文。可以把 U-Net 写成:
+
+$$
+F_{\theta}(R)
+=
+D_\theta
+\left(
+E_\theta(R),
+\{S_\theta^{(l)}(R)\}_{l=1}^L
+\right).
+$$
+
+这里 $E_\theta(R)$ 估计曝光、白平衡、场景亮度等全局变量; $S_\theta^{(l)}(R)$ 保留不同尺度的局部细节。对 learned ISP 来说, U-Net 的理论角色是:
+
+> 用一个多尺度、平移等变的函数族, 快速近似 RAW 条件下的 Bayes 点估计。
+
+它的弱点也很清楚: 如果颜色风格依赖全局语义, 或者纹理恢复需要很远位置的自相似结构, 纯 CNN 的固定局部核会比较吃力。
+
+#### Transformer: 内容自适应的非局部成像算子
+
+Transformer 的核心是 self-attention。把图像分成 token 后, 每个位置 $i$ 的输出是:
+
+$$
+h_i'
+=
+\sum_j
+A_{ij}v_j,
+$$
+
+其中:
+
+$$
+A_{ij}
+=
+\frac{
+\exp(q_i^\top k_j/\sqrt{d})
+}{
+\sum_{j'}
+\exp(q_i^\top k_{j'}/\sqrt{d})
+}.
+$$
+
+这和卷积有根本区别。卷积核 $W(q)$ 通常只依赖相对位置; attention 权重 $A_{ij}$ 依赖图像内容。于是 Transformer 可以被看成一种内容自适应的非局部滤波:
+
+$$
+h_i'
+=
+\sum_j
+K_\theta(R;i,j)h_j.
+$$
+
+这个形式和传统图像处理里的 non-local means 有相似味道: 若两个区域内容相似, 即使距离很远, 也可以互相提供信息。对 ISP 来说, 这特别适合几件事:
+
+1. 全局白平衡和颜色恒常性: 颜色判断可能需要整张图的统计。
+2. 重复纹理恢复: 远处相似 patch 可以帮助当前区域去噪和补细节。
+3. HDR / tone mapping: 局部压缩需要知道全局亮度分布。
+4. 任务感知 ISP: 某些语义区域, 如天空、皮肤、车灯, 应有不同处理偏好。
+
+问题是标准 attention 的复杂度是:
+
+$$
+O(N^2),
+$$
+
+而 RAW 图像的 $N$ 很大。因此 SwinIR、Uformer、Restormer 这类低层视觉 Transformer 都在做同一个折中: 保留非局部或内容自适应能力, 但用 window attention、hierarchical encoder-decoder、channel attention 或高效 feed-forward block 控制成本 [27-29]。
+
+理论上, Transformer 不是简单替代 CNN, 而是在改变假设空间:
+
+$$
+\mathcal{F}_{CNN}
+\subset
+\mathcal{F}_{local},
+\qquad
+\mathcal{F}_{Transformer}
+\subset
+\mathcal{F}_{content\ adaptive}.
+$$
+
+CNN 假设相同局部 pattern 用相同规则处理; Transformer 允许处理规则随整张图内容改变。对 learned ISP 来说, 这意味着:
+
+> Transformer 把 ISP 从“固定局部滤波器”推进到“内容自适应的非局部估计器”。
+
+但它也有代价: 更高的算力、更强的数据需求, 以及可能更弱的物理可解释性。
+
+#### Diffusion: 从点估计变成条件后验采样
+
+CNN 和 Transformer 通常学习一个确定性映射:
+
+$$
+\hat{y}
+=
+F_\theta(r).
+$$
+
+Diffusion 的建模对象不同。它关心的是整个条件分布:
+
+$$
+p_\theta(y\mid r).
+$$
+
+对 ISP 来说, 这很自然。因为同一个 RAW 可以有多种合理渲染: 偏暖或偏冷, 高对比或低对比, 保守降噪或保留颗粒, 甚至在反向 RGB-to-RAW 中有多个可能 RAW 解释。
+
+DDPM/score-based diffusion 的 forward process 可以写成:
+
+$$
+q(y_t\mid y_0)
+=
+\mathcal{N}
+\left(
+\alpha_t y_0,
+\sigma_t^2 I
+\right).
+$$
+
+训练时学习噪声或 score:
+
+$$
+\min_\theta
+\mathbb{E}_{y_0,r,t,\epsilon}
+\left[
+\left\|
+\epsilon
+-
+\epsilon_\theta(y_t,t,r)
+\right\|^2
+\right],
+$$
+
+等价地, 学习:
+
+$$
+s_\theta(y_t,t,r)
+\approx
+\nabla_{y_t}\log p_t(y_t\mid r).
+$$
+
+生成时从噪声出发, 沿 reverse SDE 或 probability-flow ODE 回到图像分布 [30,31]:
+
+$$
+dy
+=
+\left[
+f(y,t)
+-
+g(t)^2
+\nabla_y\log p_t(y\mid r)
+\right]dt
++
+g(t)d\bar{w}_t.
+$$
+
+因此, diffusion ISP 的理论角色不是“更大的 U-Net”, 而是:
+
+> 用一个生成式后验 $p_\theta(Y\mid R=r)$ 替代单点回归。
+
+这能解释为什么 diffusion 适合补纹理、低光细节和感知质量。L2 回归倾向输出条件均值:
+
+$$
+\mathbb{E}[Y\mid R=r],
+$$
+
+当后验多峰时, 条件均值会过平滑。Diffusion 则可以从不同模态采样:
+
+$$
+y^{(k)}
+\sim
+p_\theta(Y\mid R=r).
+$$
+
+但这也带来风险。ISP 不是纯生成任务, RAW 是真实测量。若 diffusion prior 太强, 它可能生成“看起来合理但传感器并未测到”的纹理。更严格的写法应该是后验:
+
+$$
+p(y\mid r)
+\propto
+p(r\mid y)p(y).
+$$
+
+于是 inverse-problem diffusion / posterior sampling 会把 score 分成两项:
+
+$$
+\nabla_y\log p(y\mid r)
+=
+\nabla_y\log p(y)
++
+\nabla_y\log p(r\mid y).
+$$
+
+前一项来自自然图像 diffusion prior, 后一项来自相机观测模型。DDRM、DPS 等工作就是在尝试把 diffusion prior 和测量一致性结合起来 [32,33]。对 learned ISP 来说, 这给出一个重要判断:
+
+> Diffusion 很适合表达“多种可能输出”, 但必须被 RAW likelihood、颜色一致性、噪声模型或物理 forward model 约束, 否则容易从恢复滑向幻觉。
+
+最近的 ISPDiffuser、RAW-Diffusion、DarkDiff 等工作正是在 RAW-to-sRGB、RGB-to-RAW 或低光 RAW enhancement 中利用 diffusion 的生成先验 [37,38]。它们的共同动机是: 回归式 ISP 容易平滑和颜色漂移, diffusion 可以更好地建模细节分布。但它们也必须额外处理颜色一致性、RAW 条件注入和物理测量约束。
+
+#### Flow Matching: 把 ISP 看成分布输运
+
+Flow Matching 和 diffusion 关系很近, 但数学对象不完全一样。它不先定义随机反向去噪过程, 而是学习一个连续时间向量场:
+
+$$
+\frac{dz_t}{dt}
+=
+v_\theta(z_t,t,r).
+$$
+
+这个 ODE 把一个简单分布 $p_0$ 运输到目标分布 $p_1(\cdot\mid r)$:
+
+$$
+z_0\sim p_0,
+\qquad
+z_1\sim p_1(\cdot\mid r).
+$$
+
+概率密度满足连续性方程:
+
+$$
+\partial_t p_t(z\mid r)
++
+\nabla\cdot
+\left(
+p_t(z\mid r)v_t(z\mid r)
+\right)
+=
+0.
+$$
+
+Flow Matching 的训练目标是直接回归某条 probability path 的速度场 [34]:
+
+$$
+\min_\theta
+\mathbb{E}_{t,z_t,r}
+\left[
+\|v_\theta(z_t,t,r)-u_t(z_t\mid z_0,z_1,r)\|^2
+\right].
+$$
+
+最简单的 rectified flow 使用直线路径 [35]:
+
+$$
+z_t
+=
+(1-t)z_0+t z_1,
+\qquad
+u_t
+=
+z_1-z_0.
+$$
+
+于是模型学的是:
+
+$$
+v_\theta(z_t,t,r)
+\approx
+z_1-z_0.
+$$
+
+它和 diffusion 的区别可以这样理解:
+
+- Diffusion 学 score: “在当前噪声尺度下, 往哪里去更像数据?”
+- Flow Matching 学 velocity: “沿着一条输运路径, 当前点应该以什么速度移动?”
+
+在 learned ISP 中, Flow Matching 很自然, 因为 ISP 本来就是域变换:
+
+$$
+\text{RAW distribution}
+\longrightarrow
+\text{sRGB distribution},
+$$
+
+或反过来:
+
+$$
+\text{sRGB distribution}
+\longrightarrow
+\text{RAW distribution}.
+$$
+
+如果我们在 latent space 中编码 RAW 和 RGB:
+
+$$
+z_R=E_R(R),
+\qquad
+z_Y=E_Y(Y),
+$$
+
+那么 RGB-to-RAW 或 RAW-to-sRGB 可以被写成 latent transport:
+
+$$
+\frac{dz_t}{dt}
+=
+v_\theta(z_t,t,\text{condition}),
+\qquad
+z_0=z_Y,
+\quad
+z_1=z_R.
+$$
+
+这正是 RAW-Flow 这类近期工作的关键思路: RGB-to-RAW 不是一个普通回归问题, 因为标准 ISP 丢失了信息; 可以把它改写为 latent space 中的确定性 flow matching, 学习从 RGB 表示到 RAW 表示的输运向量场 [39]。
+
+Flow Matching 对 ISP 的吸引力在于:
+
+1. 它保留生成模型的分布建模能力;
+2. 采样通常可以比 diffusion 少步;
+3. ODE 形式更适合 deterministic mapping 和可控部署;
+4. 对 paired RAW/RGB 数据, 直线路径或 OT path 很容易构造;
+5. 对 reverse ISP, latent transport 比像素回归更能表达 ill-posedness。
+
+但它也不是银弹。如果 RGB-to-RAW 本来是多解的, deterministic flow 只能在某个 coupling 下选择一种解释。更完整的模型应该保留条件分布:
+
+$$
+R
+\sim
+p_\theta(R\mid Y),
+$$
+
+或者在 latent flow 中引入随机初值:
+
+$$
+z_0
+\sim
+p_0(z\mid Y),
+\qquad
+z_1
+=
+\mathrm{Flow}_\theta(z_0;Y).
+$$
+
+也就是说, Flow Matching 给了我们一个非常漂亮的数学语言: ISP 不只是函数拟合, 也可以是从一个条件分布到另一个条件分布的输运问题。
+
+#### 这四类结构怎么选择?
+
+如果把 learned ISP 目标写成:
+
+$$
+\hat{y}
+\sim
+p_\theta(Y\mid R=r),
+$$
+
+那么四种结构对应四种近似层级:
+
+| 结构 | 近似对象 | 适合场景 | 主要风险 |
+| --- | --- | --- | --- |
+| CNN / U-Net | Bayes 点估计 $\delta^\star(r)$ | 实时 ISP、去噪、去马赛克、移动端 | 全局语义和长程依赖弱 |
+| Transformer | 内容自适应点估计或表示 | 全局颜色、HDR、复杂纹理、任务感知前端 | 算力高, 数据需求大 |
+| Diffusion | 条件后验 $p(Y\mid R)$ | 多解渲染、低光细节、感知质量、逆问题采样 | 慢, 可能幻觉, 需要物理约束 |
+| Flow Matching | 条件分布输运 ODE | 快速生成式 ISP、RAW/RGB latent translation、reverse ISP | coupling 选择敏感, 多解性需额外建模 |
+
+因此, 这几类方法不是简单的竞品关系。更像是不同层级的理论选择:
+
+$$
+\text{CNN}
+\rightarrow
+\text{Transformer}
+\rightarrow
+\text{Diffusion}
+\rightarrow
+\text{Flow Matching}
+$$
+
+并不是越往右越好, 而是建模对象越来越从“点估计”走向“分布输运”。如果目标是手机相机实时出图, CNN/U-Net 或轻量 Transformer 可能最合适; 如果目标是低光照片的感知质量, diffusion 更有意义; 如果目标是 RGB-to-RAW、RAW-to-sRGB 的生成式域转换, flow matching 会变得非常自然。
+
+把它压缩成一句话:
+
+> CNN 和 Transformer 主要在学习 $F_\theta:R\mapsto Y$; Diffusion 在学习 $p_\theta(Y\mid R)$; Flow Matching 在学习把一个条件分布连续运输到另一个条件分布的向量场。
+
 ## 12. 一个统一形式
 
 这些工作表面上差异很大, 但可以统一成:
@@ -1509,6 +1964,8 @@ $$
 第六, 深度学习没有让成像模型变得不重要。恰恰相反, 越要学习 ISP, 越需要知道哪些信息在 RAW 中, 哪些信息在 JPEG 中已经丢失, 哪些步骤有明确物理意义, 哪些步骤是主观渲染, 哪些目标会引入幻觉。
 
 第七, 网络结构不是附属实现细节。U-Net、pyramid、two-stage、cycle、invertible、reconfigurable 或 task-aware modulation, 都是在选择不同的函数族 $\mathcal{F}_A$。它们把多尺度性、潜变量分解、信息保留、可逆性、任务条件化和硬件成本写进 learned ISP 的假设空间。换结构, 本质上是在换一种隐式先验。
+
+第八, CNN、Transformer、Diffusion 和 Flow Matching 对 learned ISP 的建模层级不同。CNN/U-Net 更像快速的 Bayes 点估计; Transformer 把处理规则变成内容自适应的非局部核; Diffusion 建模条件后验 $p(Y\mid R)$; Flow Matching 则把 RAW、RGB 或 latent 表示之间的关系写成连续分布输运。它们不是简单替代关系, 而是在点估计、条件分布和概率流之间选择不同数学对象。
 
 如果把这篇文章压缩成一句话, 我会写:
 
@@ -1569,3 +2026,29 @@ $$
 [25] Mosleh, A., Sharma, A., Onzon, E., Mannan, F., Robidoux, N., & Heide, F. Hardware-in-the-loop End-to-end Optimization of Camera Image Processing Pipelines. CVPR 2020. <https://light.princeton.edu/publication/hil_image_optimization/>
 
 [26] Onzon, E., Mannan, F., & Heide, F. Neural Auto-Exposure for High-Dynamic Range Object Detection. CVPR 2021. <https://light.princeton.edu/publication/neural_auto_exposure/>
+
+[27] Liang, J., Cao, J., Sun, G., Zhang, K., Van Gool, L., & Timofte, R. SwinIR: Image Restoration Using Swin Transformer. ICCV Workshops 2021. <https://arxiv.org/abs/2108.10257>
+
+[28] Wang, Z., Cun, X., Bao, J., Zhou, W., Liu, J., & Li, H. Uformer: A General U-Shaped Transformer for Image Restoration. CVPR 2022. <https://arxiv.org/abs/2106.03106>
+
+[29] Zamir, S. W., Arora, A., Khan, S., Hayat, M., Khan, F. S., Yang, M.-H., & Shao, L. Restormer: Efficient Transformer for High-Resolution Image Restoration. CVPR 2022. <https://arxiv.org/abs/2111.09881>
+
+[30] Ho, J., Jain, A., & Abbeel, P. Denoising Diffusion Probabilistic Models. NeurIPS 2020. <https://arxiv.org/abs/2006.11239>
+
+[31] Song, Y., Sohl-Dickstein, J., Kingma, D. P., Kumar, A., Ermon, S., & Poole, B. Score-Based Generative Modeling through Stochastic Differential Equations. ICLR 2021. <https://arxiv.org/abs/2011.13456>
+
+[32] Kawar, B., Elad, M., Ermon, S., & Song, J. Denoising Diffusion Restoration Models. NeurIPS 2022. <https://arxiv.org/abs/2201.11793>
+
+[33] Chung, H., Sim, B., Ryu, D., & Ye, J. C. Diffusion Posterior Sampling for General Noisy Inverse Problems. ICLR 2023. <https://arxiv.org/abs/2209.14687>
+
+[34] Lipman, Y., Chen, R. T. Q., Ben-Hamu, H., Nickel, M., & Le, M. Flow Matching for Generative Modeling. ICLR 2023. <https://arxiv.org/abs/2210.02747>
+
+[35] Liu, X., Gong, C., & Liu, Q. Flow Straight and Fast: Learning to Generate and Transfer Data with Rectified Flow. ICLR 2023. <https://arxiv.org/abs/2209.03003>
+
+[36] Tong, A., Malkin, N., Fatras, K., Atanackovic, L., Zhang, Y., Huguet, G., Wolf, G., & Bengio, Y. Improving and Generalizing Flow-Based Generative Models with Minibatch Optimal Transport. Transactions on Machine Learning Research, 2024. <https://arxiv.org/abs/2302.00482>
+
+[37] Ren, Y., Jiang, H., Yang, M., Li, W., & Liu, S. ISPDiffuser: Learning RAW-to-sRGB Mappings with Texture-Aware Diffusion Models and Histogram-Guided Color Consistency. AAAI 2025. <https://arxiv.org/abs/2503.19283>
+
+[38] Reinders, C., et al. RAW-Diffusion: RGB-Guided Diffusion Models for High-Fidelity RAW Image Generation. WACV 2025. <https://arxiv.org/abs/2411.13150>
+
+[39] Liu, Z., Feng, D., Jiang, H., Zeng, L., Wang, H., Feng, C., Lei, L., Zeng, B., & Liu, S. RAW-Flow: Advancing RGB-to-RAW Image Reconstruction with Deterministic Latent Flow Matching. AAAI 2026. <https://arxiv.org/abs/2601.20364>
