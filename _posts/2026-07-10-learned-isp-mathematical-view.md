@@ -1,5 +1,5 @@
 ---
-title: "从 RAW 到 sRGB: Learned ISP 的数学本质"
+title: "从 RAW 到图像: 相机前端的统一数学视角"
 date: 2026-07-10
 categories:
   - tech
@@ -8,21 +8,22 @@ tags:
   - isp
   - raw
   - deep-learning
+excerpt: "这篇文章不把 learned ISP 当成“用神经网络修图”, 而是从 RAW 观测、Bayes 推断、损失函数、结构先验和任务目标出发, 把相机前端统一看成一个带物理模型和渲染偏好的数学决策问题。"
 custom_css:
   - learned-isp-map
 ---
 
 我们平时说“相机拍了一张照片”, 这句话其实省略了太多东西。传感器并不会直接给出一张好看的 RGB 图片。它最初得到的是 RAW: 线性的、带噪声的、经过 CFA 马赛克采样的传感器读数。我们最终看到的 sRGB/JPEG, 则是经过一整套 ISP, Image Signal Processing pipeline, 之后的结果。
 
-所以 learned ISP 要回答的问题不是“能不能用神经网络修图”, 而是:
+所以, 如果我们把现代可学习相机前端放进一个统一的数学框架, 它要回答的问题不是“能不能用神经网络修图”, 而是:
 
 > 给定传感器测量, 如何恢复、解释并渲染出某种目标图像?
 
 这句话里有三个层次: 恢复, 是从有噪声、有缺失的 RAW 中估计场景信号; 解释, 是把相机响应、颜色、曝光、噪声和显示模型放到同一个数学框架里; 渲染, 是决定什么样的输出才算“好图像”。深度学习进入 ISP 的真正意义, 是把这些原本由工程规则、厂商经验和人工调参定义的流程, 变成一个由数据、损失函数、结构先验和任务目标共同决定的优化问题。
 
-下面只围绕一个统一模型展开: 场景 $X$ 同时产生 RAW 观测 $R$ 与目标图像 $Y$; learned ISP 根据 $R$ 对不可见场景做推断, 再为某种风格、显示设备或下游任务作决策。文章先建立观测模型与 Bayes 解, 再用一张非串行架构图定位论文, 最后把网络结构拆成管线分解、空间算子和推断语义三个彼此独立的选择。
+下面只围绕一个统一模型展开: 场景 $X$ 同时产生 RAW 观测 $R$ 与目标图像 $Y$; 可学习相机前端根据 $R$ 对不可见场景做推断, 再为某种风格、显示设备或下游任务作决策。文章先建立观测模型与 Bayes 解, 再用一张非串行架构图定位论文, 最后把网络结构拆成管线分解、空间算子和推断语义三个彼此独立的选择。
 
-## 从观测到决策: Learned ISP 的统一模型
+## 从观测到决策: 相机前端的统一模型
 
 ### RAW 不是照片, 而是传感器观测
 
@@ -454,12 +455,12 @@ $$
 
 | 图中位置 | 代表工作 | 数学上主要改变什么 |
 | --- | --- | --- |
-| 观测与训练数据 $p_{\psi}(R\mid X,m)$ | FlexISP、Unprocessing、CycleISP、RAW prior [1,8,9,13-15,24] | 显式写入 CFA、噪声和相机 forward model, 或构造更可信的 RAW/RGB 联合分布 |
+| 观测与训练数据 $p_{\psi}(R\mid X,m)$ | FlexISP、Unprocessing、CycleISP、RAW prior、ROD、AODRaw、RAWDet-7、ReRAW [1,8,9,13-15,24,42,43,49,50] | 显式写入 CFA、噪声和相机 forward model, 或构造更可信的 RAW/RGB 联合分布 |
 | 恢复后验 $q(S\mid R,m)$ | Deep Joint、SID/LSID、PnP/RED/DIP [2,4,16-20] | 用解析先验或摊销网络求解去噪、去马赛克和低光恢复 |
 | 函数族与中间分解 $\mathcal{F}_{\mathcal{A}}$ | DeepISP、PyNET、CameraNet、ReconfigISP、InvISP、Learnable Dictionary [3,5-7,10,21] | 选择端到端、两阶段、可重构或可逆结构, 从而改变可辨识性、信息保留和计算成本 |
 | 空间算子 $F_{\theta}$ | U-Net、SwinIR、Uformer、Restormer [11,27-29] | 用局部多尺度卷积或非局部注意力参数化恢复器、渲染器、score 或 velocity |
-| 条件分布与反向 ISP | Diffusion、DPS、Flow Matching、ISPDiffuser、RAW-Diffusion、RAW-Flow [30-39] | 从单点回归转向 $p(Y\mid R)$、$p(R\mid Y)$ 或两种分布之间的概率输运 |
-| 消费者、损失与成本 $G_{\omega},\ell,C$ | VisionISP、ISP4ML、HIL、Neural Auto-Exposure [22,23,25,26] | 把最优输出从“好看的照片”改成任务充分表示, 并联合优化硬件代价 |
+| 条件分布与反向 ISP | Diffusion、DPS、Flow Matching、ISPDiffuser、RAW-Diffusion、RAW-Flow、ReRAW [30-39,50] | 从单点回归转向 $p(Y\mid R)$、$p(R\mid Y)$ 或两种分布之间的概率输运 |
+| 消费者、损失与成本 $G_{\omega},\ell,C$ | VisionISP、ISP4ML、HIL、Neural Auto-Exposure、DynamicISP、AdaptiveISP、RAW-Adapter、RAM、Dark-ISP、TA-ISP [22,23,25,26,40,41,44-48] | 把最优输出从“好看的照片”改成任务充分表示, 并联合优化硬件代价 |
 
 这个定位还澄清了两个容易混淆的概念。SwinIR、Uformer 和 Restormer 首先是图像恢复的空间算子, 它们本身没有定义 RAW 的传感器似然或最终渲染目标; [30-36] 首先是 diffusion、逆问题采样和 flow matching 的数学基础, 也不是完整的相机 ISP。只有当这些算子或概率过程与 RAW 条件、目标图像和损失函数结合时, 它们才成为 learned ISP 系统的一部分。
 
@@ -1419,7 +1420,7 @@ $$
 
 当我们说某个 neural ISP 结构有效时, 更准确的说法应该是: 它选择的函数族 $\mathcal{F}_A$ 与这个成像任务的观测模型、先验、损失函数和计算约束更匹配。
 
-## 把 Learned ISP 拆成三个建模选择
+## 把可学习相机前端拆成三个建模选择
 
 图 1 暴露了一个关键区别: one-stage、two-stage 与 invertible 选择随机变量怎样连接; CNN 和 Transformer 选择怎样参数化空间函数; regression、diffusion 和 flow matching 选择模型输出一个决策点还是条件分布。把这些名字排成一条“架构升级路线”并不准确。一个完整系统至少包含三个彼此独立的选择:
 
@@ -1891,6 +1892,437 @@ $$
 
 如果一篇论文无法回答这些问题, 那么“更好的 architecture”往往只是一个不完整的结论。反过来, 一旦能指出它修改了图中的哪一块, 不同方法就有了可比较的共同坐标。
 
+## 从 Bayes risk 推出这些论文的族谱
+
+上面的六元组还只是论文阅读坐标。要让它真正有解释力, 需要再往前推一步: 什么叫一个相机前端“保留了任务需要的信息”?
+
+设任务为 $\tau$, 任务标签或目标变量为 $Y_{\tau}=h_{\tau}(S)$, 损失为 $\ell_{\tau}$。一个相机前端把 RAW 观测 $R$ 变成表示:
+
+$$
+Z = F(R).
+$$
+
+对这个表示而言, 下游最优风险是:
+
+$$
+\mathcal{R}_{\tau}(Z)
+=
+\inf_g
+\mathbb{E}
+\left[
+\ell_{\tau}(g(Z),Y_{\tau})
+\right].
+$$
+
+如果直接让下游模型使用完整 RAW, 可得到 RAW oracle 风险:
+
+$$
+\mathcal{R}_{\tau}(R)
+=
+\inf_g
+\mathbb{E}
+\left[
+\ell_{\tau}(g(R),Y_{\tau})
+\right].
+$$
+
+于是一个前端 $F$ 对任务 $\tau$ 的信息损失可以定义为:
+
+$$
+\Delta_{\tau}(F)
+=
+\mathcal{R}_{\tau}(F(R))
+-
+\mathcal{R}_{\tau}(R)
+\ge 0.
+$$
+
+这个量比 PSNR 更接近我们真正关心的问题。若 $\Delta_{\tau}(F)=0$, 就说明 $F(R)$ 对任务 $\tau$ 来说和 RAW 一样充分; 若 $\Delta_{\tau}(F)>0$, 就说明前端丢掉了某些任务必要信息。VisionISP、ISP4ML、RAW object detection、TA-ISP 这些工作真正挑战的就是传统人眼 ISP 的这个 risk gap。
+
+如果同时考虑人类渲染、检测、分割、鲁棒性和硬件成本, 统一目标可以写成:
+
+$$
+\min_F
+\sum_{\tau\in\mathcal{T}}
+\lambda_{\tau}
+\mathcal{R}_{\tau}(F(R))
++
+\beta I(R;F(R))
++
+\gamma C(F).
+$$
+
+这里 $\mathcal{R}_{\tau}$ 衡量任务性能, $I(R;F(R))$ 或码率约束衡量表示大小, $C(F)$ 衡量延迟、功耗和硬件复杂度。不同论文其实是在这个目标里打开不同的系数: 摄影 ISP 让 human rendering 权重大; RAW detection 让 task loss 权重大; mobile / edge 方法让 $C(F)$ 权重大; invertible ISP 则把信息保留约束推到极端。
+
+### 为什么不存在通用最优 ISP
+
+如果两个任务 $\tau_1,\tau_2$ 的损失不同, 它们的 Bayes 决策一般不同:
+
+$$
+\delta_{\tau}^{\star}(r)
+=
+\arg\min_u
+\mathbb{E}
+[
+\ell_{\tau}(u,Y_{\tau})
+\mid R=r
+].
+$$
+
+给人看的图像希望有舒服的 tone、颜色和噪声观感; 检测器可能更需要暗部边缘、高光区域和物体纹理。若传统 ISP 是:
+
+$$
+Y_{rgb}=H(R),
+$$
+
+并且 $H$ 包含 clipping、tone mapping、gamma、8-bit quantization 和 JPEG compression, 那么由数据处理不等式:
+
+$$
+I(Y_{\tau};H(R))
+\le
+I(Y_{\tau};R).
+$$
+
+只要这个不等式是严格的, 就会出现:
+
+$$
+\mathcal{R}_{\tau}(H(R))
+>
+\mathcal{R}_{\tau}(R).
+$$
+
+这就是 task-aware ISP 的理论起点。它不是说 RGB 不好, 而是说人眼 RGB 不是所有任务的充分统计量。VisionISP、ISP4ML、DynamicISP、AdaptiveISP、RAW-Adapter、RAM、Dark-ISP、TA-ISP 都可以看成在寻找另一个 $F$ 让 $\Delta_{\tau}(F)$ 变小, 同时不让 $C(F)$ 爆掉。
+
+### 串行管线为什么危险, 并行管线为什么合理
+
+传统 ISP 是串行组合:
+
+$$
+Z_K
+=
+F_K\circ F_{K-1}\circ\cdots\circ F_1(R).
+$$
+
+如果中间某一步是不可逆的, 之后所有模块都无法恢复它丢掉的信息。形式化地:
+
+$$
+I(Y_{\tau};Z_K)
+\le
+I(Y_{\tau};Z_{K-1})
+\le
+\cdots
+\le
+I(Y_{\tau};R).
+$$
+
+所以串行管线的每一步都在承担一个不可回滚的表示选择。去马赛克、降噪、tone mapping 和压缩不是中性操作, 而是在修改后续任务能看到的统计量。
+
+RAM 这类并行 RAW processing 的理论意义正在这里 [45]。如果并行地产生:
+
+$$
+Z=(F_1(R),F_2(R),\ldots,F_K(R)),
+$$
+
+那么它至少不必过早承诺唯一处理路径。融合器 $H_{\theta}$ 可以在任务监督下选择哪些统计有用:
+
+$$
+\hat{Y}_{\tau}
+=
+G_{\omega}(H_{\theta}(Z)).
+$$
+
+这不是模仿人眼视觉系统这么简单, 而是在降低串行不可逆决策带来的 risk gap。DynamicISP 和 AdaptiveISP 走的是另一条路: 不保留所有分支, 而是学习一个输入相关策略:
+
+$$
+a \sim \pi_{\alpha}(a\mid R),
+\qquad
+Z=F_a(R),
+$$
+
+再用 $\mathcal{L}_{task}+\lambda C(a)$ 在任务性能和计算成本之间折中。并行分支是“保留多种候选统计”, 动态策略是“按场景选择处理路径”; 二者都是对固定串行 ISP 的理论回应。
+
+### 两阶段和模块化为什么提高可解释性
+
+端到端 RAW-to-RGB 网络只约束整体映射:
+
+$$
+Y \approx F_{\theta}(R).
+$$
+
+如果存在任意可逆变换 $T$, 那么分解:
+
+$$
+F_{\theta}
+=
+D_{\psi}\circ E_{\phi}
+=
+(D_{\psi}\circ T^{-1})\circ(T\circ E_{\phi})
+$$
+
+给出的最终输出完全一样, 但中间表示含义完全不同。因此, 只用最终 RGB 监督时, 中间层是否真的对应去噪、去马赛克、白平衡或颜色校正, 在数学上不可辨识。
+
+两阶段或模块化方法的价值, 是给中间变量加约束:
+
+$$
+\min_{\phi,\psi}
+\mathcal{L}_{render}(D_{\psi}(E_{\phi}(R)),Y)
++
+\lambda
+\mathcal{L}_{latent}(E_{\phi}(R),S).
+$$
+
+CameraNet、Model-Based ISP、Dark-ISP 都可以这样理解 [6,21,46]。它们不是迷信传统模块, 而是在缩小等价解空间。物理中间变量 $S$ 越明确, 模型越不容易用数据集捷径解释训练集, 跨相机和跨曝光泛化也更有希望。
+
+### 可逆、reverse ISP、diffusion 与 flow 的共同问题
+
+如果 forward ISP $H$ 是 many-to-one, 则:
+
+$$
+H(R_1)=H(R_2)=Y,
+\qquad
+R_1\ne R_2.
+$$
+
+这意味着:
+
+$$
+H(R\mid Y)>0.
+$$
+
+因此 RGB-to-RAW 不能被理解为求一个确定性逆函数, 而应理解为后验建模:
+
+$$
+p(R\mid Y,m).
+$$
+
+Unprocessing、CycleISP、ReRAW、RAW-Flow 都在处理这个后验, 只是选择不同近似 [8,9,39,50]。Cycle consistency 给后验加自洽约束; ReRAW 通过多头和采样权重改善经验后验拟合; RAW-Flow 把后验近似写成 latent transport。它们都不能消除 $H(R\mid Y)>0$ 这个事实, 只能选择一种合理的 coupling 或显式保留多解性。
+
+同理, RAW-to-sRGB 也未必是单峰的。若同一份 RAW 可以有多种合理渲染风格, 则:
+
+$$
+p(Y\mid R)
+\text{ is multi-modal}.
+$$
+
+L2 regression 给出条件均值:
+
+$$
+F_{L2}^{\star}(R)=\mathbb{E}[Y\mid R],
+$$
+
+这会把多种合理渲染平均掉。Diffusion 和 flow matching 的理论价值, 是把目标从点估计改成条件分布或概率路径:
+
+$$
+q_{\theta}(Y\mid R)
+\approx
+p(Y\mid R).
+$$
+
+这解释了为什么 ISPDiffuser、RAW-Diffusion、RAW-Flow 这类方法不是简单“生成模型更强”, 而是在处理多解后验。它们的风险也由此而来: 如果 RAW likelihood 或颜色一致性约束太弱, 生成先验会从“补足不确定性”滑向“制造传感器没有测到的细节”。
+
+### Adapter 和 task-oriented ISP 是先验迁移
+
+RAW-Adapter 和 TA-ISP 还揭示了另一个问题: 下游模型 $G_{\omega}$ 通常已经在 sRGB 分布上预训练。它隐含了一个输入分布先验:
+
+$$
+Z_{rgb}\sim P_{\mathrm{sRGB}}.
+$$
+
+直接把 RAW 或 RAW-like 表示喂给它, 会产生分布错配。adapter 的作用不是把 RAW 变成“漂亮图”, 而是找一个低成本映射 $A_{\theta}$, 使得:
+
+$$
+A_{\theta}(R)
+\sim
+\text{a distribution usable by } G_{\omega},
+$$
+
+同时尽量保持任务充分性:
+
+$$
+\mathcal{R}_{\tau}(A_{\theta}(R))
+-
+\mathcal{R}_{\tau}(R)
+\approx 0.
+$$
+
+因此 RAW-Adapter、TA-ISP 与传统 RAW-to-RGB 的目标不同。它们输出的不是摄影意义上的最终图像, 而是“预训练视觉模型可消费的充分表示”。这也解释了为什么它们强调轻量、modulation、input-level / model-level adapter: 论文贡献在于用很小的 $C(F)$ 换取较小的 task risk gap。
+
+### 用 risk gap 重新整理论文
+
+现在可以把收录的论文整理成一条理论链:
+
+| 理论问题 | 数学对象 | 代表论文 | 解释 |
+| --- | --- | --- | --- |
+| RAW 比 sRGB 多保留什么? | $I(Y_{\tau};R)$ vs. $I(Y_{\tau};H(R))$ | VisionISP、ISP4ML、ROD、AODRaw、RAWDet-7 | 证明或评估传统 ISP 对任务的 risk gap |
+| 如何近似 RAW oracle? | $\mathcal{R}_{\tau}(F(R))-\mathcal{R}_{\tau}(R)$ | RAM、Dark-ISP、TA-ISP、RAW-Adapter | 学一个低成本任务充分表示 |
+| 管线应固定还是自适应? | $F_a(R),\, a\sim\pi(a\mid R)$ | DynamicISP、AdaptiveISP | 把 ISP 结构和参数变成条件化策略 |
+| 中间模块是否可解释? | $F=D\circ E$ 的 identifiability | CameraNet、Model-Based ISP、Dark-ISP | 用潜变量或物理模块缩小等价解空间 |
+| 信息能否保留? | $H(R\mid Z)$ 或 $I(R;Z)$ | InvISP、ReconfigISP | 把可逆性、结构搜索和硬件约束写入函数族 |
+| 多解后验如何表达? | $p(Y\mid R)$ 或 $p(R\mid Y)$ | ISPDiffuser、RAW-Diffusion、ReRAW、RAW-Flow | 从点估计转向分布、采样或概率输运 |
+
+这样看, 这些论文之间不是散点关系, 而是在回答同一个理论问题的不同切面:
+
+> 在给定传感器观测 $R$、任务损失 $\ell_{\tau}$ 和系统成本 $C$ 时, 怎样学习一个尽可能接近 RAW oracle、又足够便宜和可部署的表示 $Z=F(R)$?
+
+## 回到具体近作: 每篇论文改了哪一项
+
+有了 risk gap 和表示充分性的推导, 最近几篇 RAW / ISP for vision 的论文就不只是“又做了一个模块”, 而是在不同位置上改写成像系统的数学定义。
+
+### DynamicISP 与 AdaptiveISP: ISP 变成策略
+
+DynamicISP 和 AdaptiveISP 都把 ISP 从固定函数变成输入相关的策略 [40,41]。固定 ISP 可以写成:
+
+$$
+Z = F_{\phi}(R).
+$$
+
+动态 ISP 更接近:
+
+$$
+\phi_t \sim \pi_{\alpha}(\phi\mid R_t,h_{t-1}),
+\qquad
+Z_t = F_{\phi_t}(R_t),
+$$
+
+其中 $h_{t-1}$ 可以是上一帧识别结果、场景状态或轻量控制器的隐藏变量。AdaptiveISP 进一步让策略选择模块结构与参数, 目标不再是图像质量, 而是检测风险和计算成本:
+
+$$
+\min_{\alpha}
+\mathbb{E}
+\left[
+\mathcal{L}_{det}
+\left(
+G_{\omega}(F_{\pi_{\alpha}(R)}(R)),
+Y_{det}
+\right)
++ \lambda C(\pi_{\alpha}(R))
+\right].
+$$
+
+在我们的框架里, 这类工作的贡献不是“强化学习调参”本身, 而是把 $\mathcal{A}$ 和 $C$ 变成逐图条件化变量。它承认一个事实: 暗光、高动态范围、普通白天场景不需要同一条 ISP 路径。最优 ISP 不是一个全局常数, 而是随观测和任务风险改变的 policy。
+
+### RAW object detection: 输出不再服务人眼
+
+Toward RAW Object Detection、AODRaw、RAM、Dark-ISP 和 TA-ISP 这组工作把消费者从人眼改成 detector / segmenter [42-48]。这时输出变量最好不要叫 RGB, 而应叫任务表示:
+
+$$
+Z = F_{\theta}(R),
+\qquad
+\hat{Y}_{task}=G_{\omega}(Z).
+$$
+
+目标也从
+
+$$
+\mathcal{L}_{render}(F_{\theta}(R),Y_{rgb})
+$$
+
+变成
+
+$$
+\mathcal{L}_{task}(G_{\omega}(F_{\theta}(R)),Y_{task})
++
+\lambda C(F_{\theta}).
+$$
+
+ROD 和 AODRaw 的价值首先在 $p_{\psi}(R,Y_{task},m)$: 它们让“RAW 是否真的比 sRGB 更适合检测”变成可测问题, 而不是直觉问题 [42,43]。RAWDet-7 又把 bit-depth 写进评估, 等价于显式研究
+
+$$
+Q_b(R), \qquad b\in\{4,6,8,\ldots\},
+$$
+
+对任务信息的影响 [49]。这和前面数据处理不等式呼应: 低 bit quantized RAW 仍可能比 sRGB 更接近传感器观测, 但它已经不是完整 RAW, 必须把量化成本放进 $C$ 或观测模型里。
+
+RAM 的特殊性在于它拒绝把 ISP 看成一条串行管线 [45]。它更像并行地产生多种任务候选表示:
+
+$$
+Z_k = F_k(R),
+\qquad
+Z = H_{\theta}(Z_1,\ldots,Z_K).
+$$
+
+这相当于把“哪一种处理最适合检测”推迟到融合器里决定。用统一框架看, RAM 改的是 pipeline factorization: 不再假设白平衡、去噪、tone mapping 必须排成固定顺序, 而是把多个统计视角并行保留给任务头。
+
+Dark-ISP 则更接近“有物理约束的任务 ISP” [46]。它把传统 ISP 拆成线性 sensor calibration 和非线性 tone mapping, 再让每个模块带内容自适应能力。数学上, 它不是完全放弃物理管线, 而是在
+
+$$
+F_{\theta}
+=
+F_{\mathrm{nonlinear},\theta}
+\circ
+F_{\mathrm{linear},\theta}
+$$
+
+这个受限函数族内优化检测损失。这个限制很重要: 低光检测需要 RAW 信息, 但如果任由大网络直接拟合, 很容易把传感器噪声、tone 偏好和检测捷径混在一起。Dark-ISP 的线性/非线性分解就是在给 $\mathcal{F}_{\mathcal{A}}$ 加可解释约束。
+
+TA-ISP 的位置又不同 [48]。它面对的是部署约束: 不想用一个重型 dense ISP, 又想让预训练视觉模型吃到更合适的输入。于是它用全局、区域、像素级的轻量 modulation 来近似空间变化变换:
+
+$$
+Z(p)
+=
+a_{\theta}(R,p)\odot T(R,p)
++
+b_{\theta}(R,p),
+$$
+
+其中 $a_{\theta},b_{\theta}$ 的自由度被控制在很小的参数量里。统一框架下, TA-ISP 是在 $\mathcal{F}_{\mathcal{A}}$ 和 $C$ 之间找折中: 表达能力要比手调 ISP 强, 但不能像完整 RAW-to-RGB 网络那样重。
+
+### RAW-Adapter: 问题不只是输入适配, 也是先验迁移
+
+RAW-Adapter 处理的是另一个常见现实: 大量强视觉模型都在 sRGB 上预训练, 但 RAW 和 sRGB 的统计不一样 [44]。如果直接把 RAW 输入预训练模型, 等价于让 $G_{\omega}$ 在训练分布外工作。RAW-Adapter 可以写成:
+
+$$
+Z = A_{\theta}^{in}(R),
+\qquad
+\hat{Y}=G_{\omega,A_{\theta}^{model}}(Z).
+$$
+
+这里有两层适配: 输入级 adapter 把 RAW 拉近预训练模型可理解的表征; 模型级 adapter 则把 ISP 阶段信息注入下游网络。用我们的术语说, 它不是单纯学习 $F_{\theta}(R)$, 而是在迁移一个 sRGB 先验:
+
+$$
+p_{\mathrm{sRGB-pretrain}}(Y)
+\quad
+\rightarrow
+\quad
+p_{\mathrm{RAW-task}}(Y\mid R).
+$$
+
+这提醒我们: 预训练权重本身也是先验。RAW 任务中的 domain gap 不只发生在像素空间, 也发生在 backbone 的特征空间。
+
+### ReRAW 与 RAW-Flow: 反向 ISP 是后验建模, 不是求逆
+
+ReRAW 和 RAW-Flow 都服务于一个数据问题: 标注好的 RGB 数据很多, 标注好的 RAW 数据少 [39,50]。因此它们试图从 RGB 构造可用于训练的 RAW。统一框架下, 这不是 $R=f^{-1}(Y)$, 而是估计:
+
+$$
+p(R\mid Y,m).
+$$
+
+ReRAW 用多头预测 RAW candidates, 再用 stratified sampling 强调高亮 RAW 像素 [50]。这可以理解为改变经验风险权重:
+
+$$
+\widehat{\mathbb{E}}_{(Y,R)}
+\left[
+w(R)\ell(\hat{R},R)
+\right],
+$$
+
+其中 $w(R)$ 让训练不要只被大量暗部/中间亮度像素主导。RAW-Flow 则把 RGB-to-RAW 写成 latent transport [39]。两者共同说明: 反向 ISP 的核心困难不是网络容量, 而是 coupling。一个 RGB 对应多个可能 RAW, 模型必须选择或表达这种多解性。
+
+### 这些论文合起来说明了什么?
+
+把这些近作放进同一张坐标系, 可以得到一个更强的判断:
+
+| 论文方向 | 改写的数学对象 | 对统一视角的补充 |
+| --- | --- | --- |
+| DynamicISP / AdaptiveISP | $\pi(\mathcal{A},\phi\mid R)$ | ISP 是输入相关的策略, 不是固定函数 |
+| ROD / AODRaw / RAWDet-7 | $p(R,Y_{task},m)$ 与 $Q_b(R)$ | RAW-for-vision 需要真实观测分布和 bit-depth 约束 |
+| RAM | $\{F_k(R)\}_{k=1}^K$ 与融合器 | 串行 ISP 不是唯一合理分解, 并行任务表示也成立 |
+| Dark-ISP | 受限的线性/非线性 $\mathcal{F}$ | 任务优化仍然可以保留物理可解释模块 |
+| RAW-Adapter / TA-ISP | adapter / modulation 函数族 | 重点是低成本地把 RAW 映射到预训练模型可用的任务表示 |
+| ReRAW / RAW-Flow | $p(R\mid Y,m)$ 或 latent transport | 反向 ISP 是多解后验建模, 不是确定性求逆 |
+
+这些工作共同把 learned ISP 推向同一个方向: ISP 不再是“把 RAW 做成漂亮 RGB”的固定前处理, 而是一个可条件化、可部署、可任务化的决策层。它连接传感器物理、数据分布、模型先验、任务损失和硬件成本。也正因为如此, 用一个统一数学视角来读它们, 比按年份罗列网络结构更有解释力。
+
 ## 我得到的结论
 
 第一, learned ISP 不是简单的图像增强。它是一个从传感器观测出发, 在不确定性下做恢复和渲染决策的问题。
@@ -1994,3 +2426,25 @@ $$
 [38] Reinders, C., et al. RAW-Diffusion: RGB-Guided Diffusion Models for High-Fidelity RAW Image Generation. WACV 2025. <https://arxiv.org/abs/2411.13150>
 
 [39] Liu, Z., Feng, D., Jiang, H., Zeng, L., Wang, H., Feng, C., Lei, L., Zeng, B., & Liu, S. RAW-Flow: Advancing RGB-to-RAW Image Reconstruction with Deterministic Latent Flow Matching. AAAI 2026. <https://arxiv.org/abs/2601.20364>
+
+[40] Yoshimura, M., Otsuka, J., Irie, A., & Ohashi, T. DynamicISP: Dynamically Controlled Image Signal Processor for Image Recognition. ICCV 2023. <https://arxiv.org/abs/2211.01146>
+
+[41] Wang, Y., Xu, T., Zhang, F., Xue, T., & Gu, J. AdaptiveISP: Learning an Adaptive Image Signal Processor for Object Detection. NeurIPS 2024. <https://arxiv.org/abs/2410.22939>
+
+[42] Xu, R., Chen, C., Peng, J., Li, C., Huang, Y., Song, F., Yan, Y., & Xiong, Z. Toward RAW Object Detection: A New Benchmark and a New Model. CVPR 2023. <https://openaccess.thecvf.com/content/CVPR2023/html/Xu_Toward_RAW_Object_Detection_A_New_Benchmark_and_a_New_CVPR_2023_paper.html>
+
+[43] Li, Z.-Y., Jin, X., Sun, B., Guo, C.-L., & Cheng, M.-M. Towards RAW Object Detection in Diverse Conditions. CVPR 2025. <https://arxiv.org/abs/2411.15678>
+
+[44] Cui, Z., & Harada, T. RAW-Adapter: Adapting Pre-trained Visual Model to Camera RAW Images. ECCV 2024. <https://arxiv.org/abs/2408.14802>
+
+[45] Gamrian, S., Barel, H., Li, F., Yoshimura, M., & Iso, D. Beyond RGB: Adaptive Parallel Processing for RAW Object Detection. ICCV 2025. <https://arxiv.org/abs/2503.13163>
+
+[46] Guo, J., Gao, X., Yan, Y., Li, G., & Pu, J. Dark-ISP: Enhancing RAW Image Processing for Low-Light Object Detection. ICCV 2025. <https://arxiv.org/abs/2509.09183>
+
+[47] Ljungbergh, W., Johnander, J., Petersson, C., & Felsberg, M. Raw or Cooked? Object Detection on RAW Images. SCIA 2023. <https://arxiv.org/abs/2301.08965>
+
+[48] Chen, K., Xiao, J., Zhang, L., Shi, K., & Gu, S. Task-Aware Image Signal Processor for Advanced Visual Perception. CVPR 2026. <https://arxiv.org/abs/2509.13762>
+
+[49] Fatima, M., Agnihotri, S., Gandikota, K. V., Moeller, M., & Keuper, M. RAWDet-7: A Multi-Scenario Benchmark for Object Detection and Description on Quantized RAW Images. 2026. <https://arxiv.org/abs/2602.03760>
+
+[50] Berdan, R., Besbinar, B., Reinders, C., Otsuka, J., & Iso, D. ReRAW: RGB-to-RAW Image Reconstruction via Stratified Sampling for Efficient Object Detection on the Edge. CVPR 2025. <https://arxiv.org/abs/2503.03782>

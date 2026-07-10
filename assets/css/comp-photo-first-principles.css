@@ -1,0 +1,505 @@
+.cp-principle-figure {
+  margin: 2rem 0 2.4rem;
+}
+
+.cp-principle-figure figcaption {
+  margin-top: 0.8rem;
+  color: #485765;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.cp-diagram {
+  overflow-x: auto;
+  border: 1px solid #d7dee6;
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.cp-diagram svg {
+  display: block;
+  width: 100%;
+  min-width: 860px;
+  height: auto;
+  font-family: Arial, "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+.cp-node rect {
+  stroke-width: 2;
+}
+
+.cp-node text {
+  fill: #172033;
+  font-size: 15px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.cp-node .cp-sub {
+  fill: #506171;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.cp-node--world rect {
+  fill: #f1f5f9;
+  stroke: #475569;
+}
+
+.cp-node--geometry rect {
+  fill: #e4f1fb;
+  stroke: #3376a6;
+}
+
+.cp-node--optics rect {
+  fill: #fff0cc;
+  stroke: #a26b12;
+}
+
+.cp-node--sensor rect {
+  fill: #e8f5ef;
+  stroke: #34815d;
+}
+
+.cp-node--learning rect {
+  fill: #f2e9fb;
+  stroke: #7d55a0;
+}
+
+.cp-node--loss rect {
+  fill: #f7e5ea;
+  stroke: #a94a65;
+  stroke-dasharray: 5 4;
+}
+
+.cp-edge {
+  fill: none;
+  stroke: #465766;
+  stroke-width: 2.2;
+}
+
+.cp-edge--geometry {
+  stroke: #3376a6;
+}
+
+.cp-edge--optics {
+  stroke: #a26b12;
+}
+
+.cp-edge--sensor {
+  stroke: #34815d;
+}
+
+.cp-edge--learning {
+  stroke: #7d55a0;
+}
+
+.cp-edge--loss {
+  stroke: #a94a65;
+  stroke-dasharray: 6 4;
+}
+
+.cp-label {
+  fill: #475569;
+  font-size: 13px;
+  font-style: italic;
+  text-anchor: middle;
+}
+
+.cp-section-label {
+  fill: #334155;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cp-plane {
+  fill: #ffffff;
+  stroke: #9aa8b5;
+  stroke-width: 1.8;
+  stroke-dasharray: 6 4;
+}
+
+.cp-ray {
+  fill: none;
+  stroke: #334155;
+  stroke-width: 1.7;
+  opacity: 0.9;
+}
+
+.cp-ray--alt {
+  stroke: #7d55a0;
+}
+
+.cp-aperture {
+  fill: #172033;
+}
+
+.cp-sensor-line {
+  stroke: #34815d;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.cp-chip {
+  fill: #e8f5ef;
+  stroke: #34815d;
+  stroke-width: 1.7;
+}
+
+.cp-surface {
+  fill: #eef4fb;
+  stroke: #3376a6;
+  stroke-width: 2;
+}
+
+.cp-highlight {
+  fill: #f7e5ea;
+  stroke: #a94a65;
+  stroke-width: 1.8;
+}
+
+.cp-mini-table {
+  margin: 1.25rem 0 1.8rem;
+  font-size: 0.92rem;
+}
+
+.cp-mini-table th,
+.cp-mini-table td {
+  vertical-align: top;
+}
+
+.page__content a {
+  overflow-wrap: anywhere;
+}
+
+.page__content mjx-container[display="true"] {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.15rem;
+}
+
+.cp-research-map {
+  display: block;
+  margin: 2rem 0 2.5rem;
+}
+
+.cp-map__controls {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0;
+  margin: 0 0 1rem;
+  border: 1px solid #b8c4cf;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.cp-map__controls button {
+  min-height: 40px;
+  padding: 0.5rem 0.65rem;
+  border: 0;
+  border-right: 1px solid #b8c4cf;
+  background: #f8fafc;
+  color: #334155;
+  font: inherit;
+  font-size: 0.82rem;
+  line-height: 1.15;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.cp-map__controls button:last-child {
+  border-right: 0;
+}
+
+.cp-map__controls button:hover {
+  background: #edf3f7;
+}
+
+.cp-map__controls button.is-active {
+  background: #1f5f86;
+  color: #fff;
+}
+
+.cp-map__controls button:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid #0f6fa8;
+  outline-offset: -2px;
+}
+
+.cp-map__diagram {
+  overflow-x: auto;
+  border: 1px solid #d9e1e7;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.cp-map__diagram svg {
+  display: block;
+  width: 100%;
+  min-width: 850px;
+  height: auto;
+  font-family: Arial, "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+.cp-map__section-label {
+  fill: #475569;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.cp-map__boundary {
+  fill: #fbfcfe;
+  stroke: #8091a0;
+  stroke-dasharray: 7 5;
+  stroke-width: 2;
+}
+
+.cp-map__boundary-label {
+  fill: #334155;
+  font-size: 15px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.cp-map__node rect,
+.cp-map__loss rect {
+  stroke-width: 2;
+}
+
+.cp-map__node text,
+.cp-map__loss text {
+  fill: #172033;
+  font-size: 16px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.cp-map__node-subtitle {
+  fill: #475569 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+
+.cp-map__node--world rect {
+  fill: #f1f5f9;
+  stroke: #475569;
+}
+
+.cp-map__node--rays rect {
+  fill: #f2e9fb;
+  stroke: #7d55a0;
+}
+
+.cp-map__node--measurement rect,
+.cp-map__node--optics rect {
+  fill: #fff0cc;
+  stroke: #a26b12;
+}
+
+.cp-map__node--observation rect {
+  fill: #e8f5ef;
+  stroke: #34815d;
+}
+
+.cp-map__node--target rect {
+  fill: #f7e5ea;
+  stroke: #a94a65;
+}
+
+.cp-map__node--geometry rect {
+  fill: #e4f1fb;
+  stroke: #3376a6;
+}
+
+.cp-map__node--photometry rect {
+  fill: #f8e8e2;
+  stroke: #a95738;
+}
+
+.cp-map__node--decision rect {
+  fill: #edf2f6;
+  stroke: #52697a;
+}
+
+.cp-map__loss rect {
+  fill: #f7f7f8;
+  stroke: #7a8b99;
+  stroke-dasharray: 4 3;
+}
+
+.cp-map__edge {
+  fill: none;
+  stroke: #475569;
+  stroke-width: 2.2;
+}
+
+.cp-map__edge--geometry {
+  stroke: #3376a6;
+}
+
+.cp-map__edge--optics {
+  stroke: #a26b12;
+}
+
+.cp-map__edge--rays {
+  stroke: #7d55a0;
+}
+
+.cp-map__edge--photometry {
+  stroke: #a95738;
+}
+
+.cp-map__edge--observation {
+  stroke: #34815d;
+}
+
+.cp-map__edge--supervision {
+  stroke: #7a8b99;
+  stroke-dasharray: 6 4;
+}
+
+.cp-map__edge--codesign {
+  stroke: #b34867;
+  stroke-dasharray: 7 5;
+}
+
+.cp-map__edge-label {
+  fill: #475569;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.cp-map__edge-label--codesign {
+  fill: #9d3655;
+}
+
+.cp-map__node[data-cam-select] {
+  cursor: pointer;
+}
+
+.cp-map__node[data-cam-select]:hover rect {
+  filter: brightness(0.97);
+}
+
+.cp-map__node[data-cam-select]:focus-visible rect {
+  stroke: #0f6fa8;
+  stroke-width: 4;
+}
+
+.cp-map__route {
+  transition: opacity 160ms ease;
+}
+
+.cp-research-map[data-active-lens="geometry"] [data-cam-route]:not([data-cam-route~="geometry"]):not([data-cam-route~="world"]),
+.cp-research-map[data-active-lens="optics"] [data-cam-route]:not([data-cam-route~="optics"]):not([data-cam-route~="world"]),
+.cp-research-map[data-active-lens="rays"] [data-cam-route]:not([data-cam-route~="rays"]):not([data-cam-route~="world"]),
+.cp-research-map[data-active-lens="photometry"] [data-cam-route]:not([data-cam-route~="photometry"]):not([data-cam-route~="world"]),
+.cp-research-map[data-active-lens="codesign"] [data-cam-route]:not([data-cam-route~="codesign"]):not([data-cam-route~="world"]) {
+  opacity: 0.15;
+}
+
+.cp-map__detail {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border-top: 2px solid #1f5f86;
+  background: #f8fafc;
+}
+
+.cp-map__panel {
+  min-height: 8rem;
+}
+
+.cp-map__panel p {
+  margin: 0 0 0.55rem;
+}
+
+.cp-map__panel p:last-child {
+  margin-bottom: 0;
+}
+
+.cp-map__panel-kicker {
+  color: #47657b;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.cp-map__panel-title {
+  color: #172033;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.cp-map__paper-links {
+  font-size: 0.84rem;
+  line-height: 1.8;
+}
+
+.page__content .cp-map__paper-links a {
+  color: #245c82;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(36, 92, 130, 0.32);
+  overflow-wrap: normal;
+}
+
+.page__content .cp-map__paper-links a::after {
+  content: " ↗";
+  font-size: 0.75em;
+}
+
+.page__content .cp-map__paper-links a:hover {
+  color: #0f4165;
+  border-bottom-color: currentColor;
+}
+
+.page__content .cp-map__paper-links a:focus-visible {
+  outline: 2px solid #0f6fa8;
+  outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  .cp-diagram svg {
+    min-width: 780px;
+  }
+
+  .cp-map__controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cp-map__controls button {
+    border-right: 1px solid #b8c4cf;
+    border-bottom: 1px solid #b8c4cf;
+  }
+
+  .cp-map__controls button:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .cp-map__controls button:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .cp-map__diagram svg {
+    min-width: 790px;
+  }
+
+  .cp-map__detail {
+    padding: 0.9rem;
+  }
+}
+
+@media print {
+  .cp-map__controls,
+  .cp-map__detail {
+    display: none;
+  }
+
+  .cp-map__diagram,
+  .cp-diagram {
+    border: 0;
+  }
+}
