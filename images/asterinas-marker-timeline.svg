@@ -1,0 +1,104 @@
+<svg viewBox="0 0 780 620" xmlns="http://www.w3.org/2000/svg">
+  <style> text { font-family: "Source Han Sans CN", "Noto Sans CJK SC", sans-serif; } </style>
+
+  <text x="390" y="24" text-anchor="middle" font-size="14" font-weight="bold" fill="#172033">从串口日志定位故障：Marker 链式排查法</text>
+  <text x="390" y="44" text-anchor="middle" font-size="10" fill="#64748B">每一条 marker 是一个可证伪的边界。缺失的 marker 精确定位第一个失败点。</text>
+
+  <!-- Timeline bar -->
+  <line x1="50" y1="72" x2="730" y2="72" stroke="#475569" stroke-width="2.5" />
+
+  <!-- Tick marks and labels -->
+  <!-- Stage 0: U-Boot visible -->
+  <circle cx="70" cy="72" r="7" fill="#3E8055" stroke="#265538" stroke-width="2" />
+  <text x="70" y="94" text-anchor="middle" font-size="9.5" fill="#265538" font-weight="bold">U-Boot</text>
+  <text x="70" y="118" text-anchor="middle" font-size="11" fill="#172033">Starting</text>
+  <text x="70" y="133" text-anchor="middle" font-size="11" fill="#172033">kernel ...</text>
+  <text x="70" y="150" text-anchor="middle" font-size="9" fill="#64748B">✓ 可见</text>
+
+  <!-- booti jump -->
+  <line x1="90" y1="72" x2="90" y2="165" stroke="#64748B" stroke-width="1" stroke-dasharray="4,3" />
+  <text x="90" y="180" text-anchor="middle" font-size="8.5" fill="#64748B">booti</text>
+  <text x="90" y="192" text-anchor="middle" font-size="8.5" fill="#64748B">跳转</text>
+
+  <!-- Stage 1: pre-satp -->
+  <circle cx="150" cy="72" r="5" fill="#DCEEFF" stroke="#2F6FA3" stroke-width="1.5" />
+  <text x="150" y="94" text-anchor="middle" font-size="9" fill="#1e4d75">jal +0x40</text>
+  <text x="150" y="120" text-anchor="middle" font-size="8" fill="#64748B">跳过 header</text>
+
+  <!-- Stage 2: page table build -->
+  <circle cx="210" cy="72" r="5" fill="#DCEEFF" stroke="#2F6FA3" stroke-width="1.5" />
+  <text x="210" y="94" text-anchor="middle" font-size="9" fill="#1e4d75">构造页表</text>
+
+  <!-- Stage 3: satp write -->
+  <circle cx="280" cy="72" r="9" fill="#F7E3E8" stroke="#A44962" stroke-width="2.5" />
+  <text x="280" y="94" text-anchor="middle" font-size="9.5" fill="#A44962" font-weight="bold">csrw satp</text>
+  <text x="280" y="120" text-anchor="middle" font-size="8" fill="#A44962">⚡ 单向门</text>
+
+  <!-- Stage 4: TLB flush -->
+  <circle cx="345" cy="72" r="5" fill="#DCEEFF" stroke="#2F6FA3" stroke-width="1.5" />
+  <text x="345" y="94" text-anchor="middle" font-size="9" fill="#1e4d75">sfence.vma</text>
+
+  <!-- Stage 5: high-half switch -->
+  <circle cx="420" cy="72" r="5" fill="#DCEEFF" stroke="#2F6FA3" stroke-width="1.5" />
+  <text x="420" y="94" text-anchor="middle" font-size="9" fill="#1e4d75">高半切换</text>
+
+  <!-- Stage 6: Rust entry -->
+  <circle cx="495" cy="72" r="8" fill="#DCEEFF" stroke="#2F6FA3" stroke-width="2" />
+  <text x="495" y="94" text-anchor="middle" font-size="9.5" fill="#1e4d75" font-weight="bold">riscv_boot</text>
+  <text x="495" y="115" text-anchor="middle" font-size="8" fill="#64748B">进入 Rust</text>
+
+  <!-- Stage 7: OSTD -->
+  <circle cx="570" cy="72" r="6" fill="#DCEEFF" stroke="#2F6FA3" stroke-width="1.5" />
+  <text x="570" y="94" text-anchor="middle" font-size="9" fill="#1e4d75">OSTD</text>
+
+  <!-- Stage 8: components -->
+  <circle cx="635" cy="72" r="6" fill="#DCEEFF" stroke="#2F6FA3" stroke-width="1.5" />
+  <text x="635" y="94" text-anchor="middle" font-size="9" fill="#1e4d75">组件</text>
+
+  <!-- Stage 9: rootfs -->
+  <circle cx="695" cy="72" r="7" fill="#DCEEFF" stroke="#2F6FA3" stroke-width="2" />
+  <text x="695" y="94" text-anchor="middle" font-size="9.5" fill="#1e4d75" font-weight="bold">rootfs</text>
+  <text x="695" y="110" text-anchor="middle" font-size="8" fill="#64748B">ready</text>
+
+  <!-- Silent Cliff bracket -->
+  <rect x="268" y="200" width="240" height="72" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1.5" rx="4" stroke-dasharray="6,3" />
+  <text x="388" y="218" text-anchor="middle" font-size="10.5" fill="#DC2626" font-weight="bold">沉默悬崖：SBI ecall 是唯一输出手段</text>
+  <text x="388" y="236" text-anchor="middle" font-size="9" fill="#991B1B">此区间内用单字符 marker 定位</text>
+  <text x="388" y="252" text-anchor="middle" font-size="9" fill="#991B1B">satp 写错 → ecall 也取不到指令 → 零输出</text>
+
+  <!-- Examples below -->
+  <text x="390" y="310" text-anchor="middle" font-size="12" font-weight="bold" fill="#172033">真机迭代：Marker 如何逐步缩小边界</text>
+
+  <!-- v3 example -->
+  <rect x="30" y="328" width="720" height="48" fill="#FFF1F2" stroke="#FCA5A5" stroke-width="1" rx="4" />
+  <text x="50" y="348" font-size="9.5" fill="#A44962" font-weight="bold">v3（失败）</text>
+  <text x="50" y="364" font-size="9" fill="#8B2543">最后 marker：satp 之前</text>
+  <text x="300" y="360" font-size="9" fill="#64748B">→ 故障在 satp 写入（页表错位 0x40）</text>
+
+  <!-- v5 example -->
+  <rect x="30" y="382" width="720" height="48" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1" rx="4" />
+  <text x="50" y="402" font-size="9.5" fill="#3E8055" font-weight="bold">v5（进展）</text>
+  <text x="50" y="418" font-size="9" fill="#265538">最后 marker：frame allocator 完成（marker '7'）</text>
+  <text x="300" y="414" font-size="9" fill="#64748B">→ 故障在页表构造，不是分配器</text>
+
+  <!-- v6 example -->
+  <rect x="30" y="436" width="720" height="48" fill="#FFFBEB" stroke="#FDE68A" stroke-width="1" rx="4" />
+  <text x="50" y="456" font-size="9.5" fill="#D97706" font-weight="bold">v6（误判）</text>
+  <text x="50" y="472" font-size="9" fill="#92400E">最后 marker：线性映射 'l'，14 秒无输出 → 误判为卡死</text>
+  <text x="300" y="468" font-size="9" fill="#64748B">→ v7 延长观察 → 实际是慢，不是死 ✗ 误判</text>
+
+  <!-- v8 example -->
+  <rect x="30" y="490" width="720" height="48" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1" rx="4" />
+  <text x="50" y="510" font-size="9.5" fill="#3E8055" font-weight="bold">v8（进展）</text>
+  <text x="50" y="526" font-size="9" fill="#265538">最后 marker：kernel::init()，所有组件完成</text>
+  <text x="300" y="522" font-size="9" fill="#64748B">→ 阻塞：rng-seed 缺失（源码诊断，非猜测）</text>
+
+  <!-- Legend -->
+  <text x="390" y="575" text-anchor="middle" font-size="9.5" fill="#475569" font-weight="bold">排查原则</text>
+  <rect x="50" y="588" width="12" height="12" fill="#FFF1F2" stroke="#FCA5A5" stroke-width="1" rx="2" />
+  <text x="68" y="599" font-size="9" fill="#64748B">故障边界（最后一个可见 marker 之后）</text>
+  <rect x="280" y="588" width="12" height="12" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1" rx="2" />
+  <text x="298" y="599" font-size="9" fill="#64748B">成功越过的边界</text>
+  <rect x="480" y="588" width="12" height="12" fill="#FFFBEB" stroke="#FDE68A" stroke-width="1" rx="2" />
+  <text x="498" y="599" font-size="9" fill="#64748B">误判：需要更严格的证据</text>
+</svg>

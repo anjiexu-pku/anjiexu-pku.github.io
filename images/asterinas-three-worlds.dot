@@ -1,0 +1,186 @@
+digraph AsterinasThreeWorlds {
+  graph [
+    rankdir=TB,
+    bgcolor="transparent",
+    pad="0.25",
+    nodesep="0.42",
+    ranksep="0.55",
+    splines=polyline,
+    outputorder=edgesfirst,
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif",
+    fontsize=14
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    color="#475569",
+    penwidth=1.4,
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif",
+    fontcolor="#172033",
+    fontsize=12.5,
+    margin="0.14,0.10"
+  ];
+
+  edge [
+    color="#475569",
+    penwidth=1.6,
+    arrowsize=0.75,
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif",
+    fontcolor="#334155",
+    fontsize=11
+  ];
+
+  subgraph cluster_host {
+    label="世界一：构建机（x86 开发环境）";
+    color="#2F6FA3";
+    fontcolor="#1e4d75";
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif";
+    fontsize=13;
+    style="rounded,dashed";
+    penwidth=1.2;
+    margin=14;
+
+    host_rust [
+      fillcolor="#DCEEFF",
+      color="#2F6FA3",
+      label=<
+        <B>Rust 编译器 + 链接器</B><BR/>
+        <FONT POINT-SIZE="10.5">cargo build --target riscv64</FONT>
+      >
+    ];
+
+    host_elf [
+      fillcolor="#DCEEFF",
+      color="#2F6FA3",
+      label=<
+        <B>RISC-V ELF</B><BR/>
+        <FONT POINT-SIZE="10.5">段 · 符号 · 重定位信息</FONT>
+      >
+    ];
+
+    host_image [
+      fillcolor="#DCEEFF",
+      color="#2F6FA3",
+      label=<
+        <B>平坦 Linux Image (booti)</B><BR/>
+        <FONT POINT-SIZE="10.5">make_booti.py 抽取 · 验证 · 补零</FONT>
+      >
+    ];
+
+    host_initramfs [
+      fillcolor="#DCEEFF",
+      color="#2F6FA3",
+      label=<
+        <B>最小 initramfs</B><BR/>
+        <FONT POINT-SIZE="10.5">cpio.gz · 诊断 /init</FONT>
+      >
+    ];
+
+    host_rust -> host_elf;
+    host_elf -> host_image;
+    host_initramfs;
+  }
+
+  subgraph cluster_firmware {
+    label="世界二：Megrez 固件（RISC-V 真机）";
+    color="#3E8055";
+    fontcolor="#265538";
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif";
+    fontsize=13;
+    style="rounded,dashed";
+    penwidth=1.2;
+    margin=14;
+
+    fw_rom [
+      fillcolor="#E2F4E8",
+      color="#3E8055",
+      label=<
+        <B>Boot ROM + DDR 初始化</B><BR/>
+        <FONT POINT-SIZE="10.5">上电第一条指令，初始化 LPDDR5</FONT>
+      >
+    ];
+
+    fw_sbi [
+      fillcolor="#E2F4E8",
+      color="#3E8055",
+      label=<
+        <B>OpenSBI（M-mode）</B><BR/>
+        <FONT POINT-SIZE="10.5">控制台 · 定时器 · IPI · 系统复位</FONT>
+      >
+    ];
+
+    fw_uboot [
+      fillcolor="#E2F4E8",
+      color="#3E8055",
+      label=<
+        <B>U-Boot（S-mode payload）</B><BR/>
+        <FONT POINT-SIZE="10.5">从 SD 卡加载 Image · DTB · initramfs</FONT><BR/>
+        <FONT POINT-SIZE="10.5">校验 Image 头 → 修补 /chosen → booti 跳转</FONT>
+      >
+    ];
+
+    fw_dtb [
+      fillcolor="#E2F4E8",
+      color="#3E8055",
+      label=<
+        <B>板载 DTB</B><BR/>
+        <FONT POINT-SIZE="10.5">内存 · CPU · PLIC · UART · 保留区</FONT>
+      >
+    ];
+
+    fw_rom -> fw_sbi;
+    fw_sbi -> fw_uboot [label="作为 S-mode payload 启动"];
+  }
+
+  subgraph cluster_kernel {
+    label="世界三：Asterinas 内核（S-mode）";
+    color="#A36B10";
+    fontcolor="#7a4e0a";
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif";
+    fontsize=13;
+    style="rounded,dashed";
+    penwidth=1.2;
+    margin=14;
+
+    kern_asm [
+      fillcolor="#FFF0C9",
+      color="#A36B10",
+      label=<
+        <B>bsp_boot.S（汇编入口）</B><BR/>
+        <FONT POINT-SIZE="10.5">跳过 64 字节 header</FONT><BR/>
+        <FONT POINT-SIZE="10.5">构造 Sv48 页表 → 写 satp</FONT><BR/>
+        <FONT POINT-SIZE="10.5">切换高半地址 → 跳转 Rust</FONT>
+      >
+    ];
+
+    kern_ostd [
+      fillcolor="#FFF0C9",
+      color="#A36B10",
+      label=<
+        <B>Rust OSTD（riscv_boot）</B><BR/>
+        <FONT POINT-SIZE="10.5">解析 DTB · 初始化内存 · 启动 AP</FONT>
+      >
+    ];
+
+    kern_kernel [
+      fillcolor="#FFF0C9",
+      color="#A36B10",
+      label=<
+        <B>Asterinas 安全 Rust 内核</B><BR/>
+        <FONT POINT-SIZE="10.5">组件 · 驱动 · VFS · syscall</FONT>
+      >
+    ];
+
+    kern_asm -> kern_ostd;
+    kern_ostd -> kern_kernel;
+  }
+
+  host_image -> fw_uboot [label="放入 SD 卡 /boot", style=dashed, color="#8B5CF6", penwidth=1.8];
+  host_initramfs -> fw_uboot [label="放入 SD 卡 /boot", style=dashed, color="#8B5CF6", penwidth=1.8];
+  fw_dtb -> fw_uboot;
+  fw_uboot -> kern_asm [label="booti 跳转\na0=hart ID, a1=DTB", penwidth=2.0];
+  fw_sbi -> kern_asm [label="SBI 服务（ecall）", style=dashed, color="#64748B"];
+  fw_sbi -> kern_ostd [label="SBI 服务（ecall）", style=dashed, color="#64748B"];
+  fw_rom -> fw_dtb [style=invis];
+}

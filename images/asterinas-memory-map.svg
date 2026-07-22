@@ -1,0 +1,136 @@
+<svg viewBox="0 0 760 830" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748B" />
+    </marker>
+  </defs>
+  <style>
+    text { font-family: "Source Han Sans CN", "Noto Sans CJK SC", sans-serif; }
+  </style>
+
+  <text x="380" y="24" text-anchor="middle" font-size="14" font-weight="bold" fill="#172033">Megrez 物理地址空间（16 GiB DRAM）</text>
+
+  <!-- The tall bar: 690px for 16 GiB -->
+  <rect x="230" y="44" width="90" height="690" fill="#F1F5F9" stroke="#475569" stroke-width="2" rx="3" />
+
+  <!-- OpenSBI: 512 KiB → 0.02px → show at 14px minimum -->
+  <rect x="230" y="44" width="90" height="14" fill="#A44962" stroke="#8B2543" stroke-width="1" />
+  <text x="275" y="54" text-anchor="middle" font-size="8.5" fill="#fff" font-weight="bold">OpenSBI</text>
+
+  <!-- Kernel: ~10.8 MiB → 0.45px → show at 22px -->
+  <rect x="230" y="64" width="90" height="22" fill="#2F6FA3" stroke="#1e4d75" stroke-width="1" />
+  <text x="275" y="79" text-anchor="middle" font-size="9" fill="#fff" font-weight="bold">Asterinas</text>
+
+  <!-- initramfs: 4px thin marker -->
+  <rect x="230" y="92" width="90" height="5" fill="#3E8055" stroke="#265538" stroke-width="0.5" />
+
+  <!-- === Huge free zone (most of the 16 GiB) === -->
+  <!-- ~13.6 GiB → 586px -->
+  <rect x="230" y="97" width="90" height="540" fill="#F8FAFC" stroke="none" />
+  <line x1="232" y1="180" x2="318" y2="180" stroke="#CBD5E1" stroke-width="0.8" stroke-dasharray="4,6"/>
+  <line x1="232" y1="270" x2="318" y2="270" stroke="#CBD5E1" stroke-width="0.8" stroke-dasharray="4,6"/>
+  <line x1="232" y1="360" x2="318" y2="360" stroke="#CBD5E1" stroke-width="0.8" stroke-dasharray="4,6"/>
+  <line x1="232" y1="450" x2="318" y2="450" stroke="#CBD5E1" stroke-width="0.8" stroke-dasharray="4,6"/>
+  <line x1="232" y1="540" x2="318" y2="540" stroke="#CBD5E1" stroke-width="0.8" stroke-dasharray="4,6"/>
+  <text x="275" y="380" text-anchor="middle" font-size="12" fill="#64748B" font-weight="bold">可用物理内存</text>
+  <text x="275" y="396" text-anchor="middle" font-size="9.5" fill="#94A3B8">~13.6 GiB</text>
+  <text x="275" y="410" text-anchor="middle" font-size="9.5" fill="#94A3B8">frame allocator</text>
+
+  <!-- Firmware reserved high: ~16 MiB → 0.7px → 14px -->
+  <rect x="230" y="639" width="90" height="14" fill="#A44962" stroke="#8B2543" stroke-width="1" />
+  <text x="275" y="649" text-anchor="middle" font-size="7.5" fill="#fff">固件保留</text>
+
+  <!-- U-Boot LMB: ~123 MiB → 5px → 16px -->
+  <rect x="230" y="655" width="90" height="16" fill="#D97706" stroke="#92400E" stroke-width="1" />
+  <text x="275" y="666" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">U-Boot LMB</text>
+
+  <!-- DTB: thin -->
+  <rect x="230" y="673" width="90" height="5" fill="#F59E0B" stroke="#B45309" stroke-width="0.5" />
+
+  <!-- U-Boot reloc: thin -->
+  <rect x="230" y="680" width="90" height="5" fill="#D97706" stroke="#92400E" stroke-width="0.5" />
+
+  <!-- Framebuffer: ~8 MiB → 0.35px → 14px -->
+  <rect x="230" y="687" width="90" height="14" fill="#4338CA" stroke="#3730A3" stroke-width="1" />
+  <text x="275" y="697" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">Framebuffer</text>
+
+  <!-- Remainder -->
+  <rect x="230" y="703" width="90" height="31" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="0.5" />
+  <text x="275" y="722" text-anchor="middle" font-size="8" fill="#94A3B8">剩余</text>
+
+  <!-- Address labels (left side) -->
+  <text x="220" y="49" text-anchor="end" font-size="9.5" fill="#64748B">0x8000_0000</text>
+  <line x1="223" y1="44" x2="230" y2="44" stroke="#94A3B8" stroke-width="1" />
+
+  <text x="220" y="76" text-anchor="end" font-size="9.5" fill="#64748B">0x8020_0000</text>
+  <line x1="223" y1="64" x2="230" y2="64" stroke="#94A3B8" stroke-width="0.5" stroke-dasharray="3,3"/>
+
+  <text x="220" y="98" text-anchor="end" font-size="9.5" fill="#64748B">0x8300_0000</text>
+  <line x1="223" y1="92" x2="230" y2="92" stroke="#94A3B8" stroke-width="0.5" stroke-dasharray="3,3"/>
+
+  <text x="220" y="645" text-anchor="end" font-size="9.5" fill="#64748B">0xDFFF_0000</text>
+  <line x1="223" y1="639" x2="230" y2="639" stroke="#94A3B8" stroke-width="0.5" stroke-dasharray="3,3"/>
+
+  <text x="220" y="665" text-anchor="end" font-size="9.5" fill="#64748B">0xE850_0000</text>
+  <line x1="223" y1="655" x2="230" y2="655" stroke="#94A3B8" stroke-width="0.5" stroke-dasharray="3,3"/>
+
+  <text x="220" y="678" text-anchor="end" font-size="9.5" fill="#64748B">0xF000_0000</text>
+  <line x1="223" y1="673" x2="230" y2="673" stroke="#94A3B8" stroke-width="0.5" stroke-dasharray="3,3"/>
+
+  <text x="220" y="686" text-anchor="end" font-size="9.5" fill="#64748B">0xFD59_0000</text>
+  <line x1="223" y1="680" x2="230" y2="680" stroke="#94A3B8" stroke-width="0.5" stroke-dasharray="3,3"/>
+
+  <text x="220" y="698" text-anchor="end" font-size="9.5" fill="#64748B">0xFD80_0000</text>
+  <line x1="223" y1="687" x2="230" y2="687" stroke="#94A3B8" stroke-width="0.5" stroke-dasharray="3,3"/>
+
+  <text x="220" y="736" text-anchor="end" font-size="9.5" fill="#64748B">0x4_8000_0000</text>
+  <line x1="223" y1="734" x2="230" y2="734" stroke="#94A3B8" stroke-width="1" />
+
+  <!-- Right side callouts -->
+  <!-- OpenSBI -->
+  <line x1="322" y1="51" x2="360" y2="30" stroke="#A44962" stroke-width="1.2" />
+  <text x="366" y="33" font-size="10.5" fill="#A44962" font-weight="bold">OpenSBI 保留区（512 KiB）</text>
+  <text x="366" y="47" font-size="8.5" fill="#8B2543">M-mode 固件代码+数据，内核不可写、不可分配</text>
+
+  <!-- Asterinas -->
+  <line x1="322" y1="75" x2="360" y2="68" stroke="#2F6FA3" stroke-width="1.2" />
+  <text x="366" y="64" font-size="10.5" fill="#2F6FA3" font-weight="bold">Asterinas Image（~10.8 MiB）</text>
+  <text x="366" y="78" font-size="8.5" fill="#1e4d75">64-byte header + 启动代码 + 页表 + 内核</text>
+  <text x="366" y="91" font-size="8.5" fill="#1e4d75">_start = 0x80200000（链接时固定，U-Boot booti 加载目标）</text>
+
+  <!-- initramfs -->
+  <line x1="322" y1="94" x2="360" y2="108" stroke="#3E8055" stroke-width="1.2" />
+  <text x="366" y="111" font-size="10.5" fill="#3E8055" font-weight="bold">initramfs（~3.4 KiB）</text>
+  <text x="366" y="124" font-size="8.5" fill="#265538">压缩 cpio.gz，U-Boot 加载到 0x83000000</text>
+
+  <!-- Framebuffer -->
+  <line x1="322" y1="694" x2="360" y2="665" stroke="#4338CA" stroke-width="1.2" />
+  <text x="366" y="661" font-size="10.5" fill="#4338CA" font-weight="bold">Framebuffer（~8 MiB）@ 0xFD80_0000</text>
+  <text x="366" y="675" font-size="8.5" fill="#3730A3">U-Boot 已初始化 HDMI scanout</text>
+  <text x="366" y="688" font-size="8.5" fill="#3730A3">Asterinas 必须从 frame allocator 中保留此区域</text>
+
+  <!-- DTB -->
+  <line x1="322" y1="675" x2="360" y2="705" stroke="#F59E0B" stroke-width="1.2" />
+  <text x="366" y="708" font-size="10.5" fill="#B45309" font-weight="bold">DTB（168 KiB）@ 0xF000_0000</text>
+  <text x="366" y="721" font-size="8.5" fill="#92400E">板载 Megrez 设备树 · U-Boot 修补 /chosen</text>
+
+  <!-- U-Boot items -->
+  <text x="366" y="744" font-size="10.5" fill="#D97706" font-weight="bold">U-Boot 保留范围（~123 MiB）+ 重定位</text>
+  <text x="366" y="757" font-size="8.5" fill="#92400E">LMB 保留区 0xE850_0000–0xEFFF_FFFF · 重定位 @ 0xFD59_0000</text>
+
+  <!-- Firmware -->
+  <text x="366" y="778" font-size="10.5" fill="#A44962" font-weight="bold">厂商固件保留区（~16 MiB）</text>
+  <text x="366" y="791" font-size="8.5" fill="#8B2543">0xDFFF_0000–0xE0FF_FFFF · DDR 训练数据 · 安全监控</text>
+
+  <!-- Legend -->
+  <rect x="14" y="812" width="10" height="10" fill="#A44962" rx="1" />
+  <text x="29" y="822" font-size="9" fill="#64748B">M-mode 固件（不可分配）</text>
+  <rect x="166" y="812" width="10" height="10" fill="#D97706" rx="1" />
+  <text x="181" y="822" font-size="9" fill="#64748B">U-Boot 临时占用</text>
+  <rect x="300" y="812" width="10" height="10" fill="#2F6FA3" rx="1" />
+  <text x="315" y="822" font-size="9" fill="#64748B">Asterinas 内核</text>
+  <rect x="420" y="812" width="10" height="10" fill="#4338CA" rx="1" />
+  <text x="435" y="822" font-size="9" fill="#64748B">外设区域（需保留）</text>
+  <rect x="550" y="812" width="10" height="10" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1" rx="1" />
+  <text x="565" y="822" font-size="9" fill="#64748B">可用物理内存（frame allocator）</text>
+</svg>

@@ -1,0 +1,73 @@
+<svg viewBox="0 0 760 540" xmlns="http://www.w3.org/2000/svg">
+  <style> text { font-family: "Source Han Sans CN", "Noto Sans CJK SC", sans-serif; } </style>
+
+  <text x="380" y="24" text-anchor="middle" font-size="14" font-weight="bold" fill="#172033">OS Bringup 实验循环：每一轮只证伪一个假设</text>
+  <text x="380" y="43" text-anchor="middle" font-size="10" fill="#64748B">真机测试是不可逆实验。盲目多改 = 同时打开多个变量 = 无法归因。</text>
+
+  <!-- Central loop: six nodes in a cycle -->
+  <!-- Node 1: Freeze identity -->
+  <rect x="290" y="62" width="180" height="60" fill="#DCEEFF" stroke="#2F6FA3" stroke-width="2" rx="8" />
+  <text x="380" y="88" text-anchor="middle" font-size="12" fill="#1e4d75" font-weight="bold">① 冻结产物身份</text>
+  <text x="380" y="107" text-anchor="middle" font-size="9" fill="#475569">commit · ELF SHA-256</text>
+  <text x="380" y="120" text-anchor="middle" font-size="9" fill="#475569">Image CRC32 · DTB 哈希</text>
+
+  <!-- Node 2: Form hypothesis -->
+  <rect x="530" y="155" width="180" height="60" fill="#E2F4E8" stroke="#3E8055" stroke-width="2" rx="8" />
+  <text x="620" y="181" text-anchor="middle" font-size="12" fill="#265538" font-weight="bold">② 单一可证伪假设</text>
+  <text x="620" y="200" text-anchor="middle" font-size="9" fill="#475569">只改一个变量</text>
+  <text x="620" y="213" text-anchor="middle" font-size="9" fill="#475569">预期一个具体 marker</text>
+
+  <!-- Node 3: Gate check -->
+  <rect x="530" y="280" width="180" height="60" fill="#FFF0C9" stroke="#A36B10" stroke-width="2" rx="8" />
+  <text x="620" y="306" text-anchor="middle" font-size="12" fill="#7a4e0a" font-weight="bold">③ 前置门禁</text>
+  <text x="620" y="325" text-anchor="middle" font-size="9" fill="#475569">QEMU 六阶段 + 独立 probe</text>
+  <text x="620" y="338" text-anchor="middle" font-size="9" fill="#475569">外部复位持续可用</text>
+
+  <!-- Node 4: Execute -->
+  <rect x="290" y="315" width="180" height="60" fill="#F7E3E8" stroke="#A44962" stroke-width="2" rx="8" />
+  <text x="380" y="341" text-anchor="middle" font-size="12" fill="#8B2543" font-weight="bold">④ 唯一一次 booti</text>
+  <text x="380" y="360" text-anchor="middle" font-size="9" fill="#475569">只执行一次，不重复尝试</text>
+  <text x="380" y="373" text-anchor="middle" font-size="9" fill="#475569">被动采集串口，不主动输入</text>
+
+  <!-- Node 5: Collect evidence -->
+  <rect x="50" y="280" width="180" height="60" fill="#E0E7FF" stroke="#4338CA" stroke-width="2" rx="8" />
+  <text x="140" y="306" text-anchor="middle" font-size="12" fill="#3730A3" font-weight="bold">⑤ 收集证据</text>
+  <text x="140" y="325" text-anchor="middle" font-size="9" fill="#475569">原始串口日志 + SHA-256</text>
+  <text x="140" y="338" text-anchor="middle" font-size="9" fill="#475569">第一条缺失 marker</text>
+
+  <!-- Node 6: Update model -->
+  <rect x="50" y="155" width="180" height="60" fill="#F1F5F9" stroke="#64748B" stroke-width="2" rx="8" />
+  <text x="140" y="181" text-anchor="middle" font-size="12" fill="#475569" font-weight="bold">⑥ 更新模型</text>
+  <text x="140" y="200" text-anchor="middle" font-size="9" fill="#475569">不是"改对了"</text>
+  <text x="140" y="213" text-anchor="middle" font-size="9" fill="#475569">是"证伪了什么"</text>
+
+  <!-- Arrows between nodes -->
+  <path d="M 380 122 L 380 140 Q 380 150 390 150 L 525 150 Q 535 150 535 160 L 535 170 Q 535 180 545 180 L 585 180 Q 595 180 595 185 L 595 190" stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#arrow)" />
+  <path d="M 620 215 L 620 240 Q 620 250 610 250 L 595 250 Q 585 250 585 260 L 585 275 Q 585 285 595 285 L 605 285 Q 615 285 620 295" stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#arrow)" />
+  <path d="M 530 310 L 480 310 Q 470 310 470 320 L 470 330 Q 470 340 460 340 L 440 340 Q 430 340 420 345 L 405 345" stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#arrow)" />
+  <path d="M 290 345 L 240 345 Q 230 345 230 335 L 230 320 Q 230 310 220 310 L 200 310 Q 190 310 185 315" stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#arrow)" />
+  <path d="M 140 215 L 140 240 Q 140 250 150 250 L 240 250 Q 250 250 250 260 L 250 275 Q 250 285 260 285 L 270 285 Q 280 285 285 290" stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#arrow)" />
+  <path d="M 140 155 L 140 130 Q 140 120 150 120 L 240 120" stroke="#64748B" stroke-width="1.2" fill="none" stroke-dasharray="5,3" marker-end="url(#arrow)" />
+  <text x="190" y="132" font-size="8" fill="#64748B">下一轮</text>
+
+  <!-- Marker arrow -->
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569" />
+    </marker>
+  </defs>
+
+  <!-- Right side: concrete example -->
+  <rect x="30" y="400" width="700" height="120" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5" rx="6" />
+  <text x="50" y="422" font-size="10.5" fill="#475569" font-weight="bold">实例：A/D 位的 QEMU Svade 降级测试（博文 1 第 6.3 节）</text>
+  <text x="50" y="442" font-size="9" fill="#64748B">① 冻结：commit c5ae1755e，默认 Sv48 Image</text>
+  <text x="50" y="458" font-size="9" fill="#64748B">② 假设：启动页表 PTE 缺少 A/D 位 → QEMU Svade 模式会 panic（单变量：只改 QEMU CPU 扩展）</text>
+  <text x="50" y="474" font-size="9" fill="#64748B">③ 门禁：QEMU 其他 5 stages 全部 PASS，仅 Svade 变体 FAIL</text>
+  <text x="50" y="490" font-size="9" fill="#64748B">④ 执行：QEMU 模拟启动，观察到 panic（精确定位在页表 walker）</text>
+  <text x="50" y="506" font-size="9" fill="#64748B">⑤ 证据：panic 日志 + 修复后 Svade/Svadu 双通</text>
+  <text x="50" y="522" font-size="9" fill="#64748B">⑥ 模型：不依赖硬件 A/D 更新，PTE 写入时手动设 A/D 位 = 安全策略</text>
+
+  <!-- Warning at bottom -->
+  <rect x="80" y="530" width="600" height="30" fill="#FFF1F2" stroke="#FCA5A5" stroke-width="1" rx="4" />
+  <text x="380" y="550" text-anchor="middle" font-size="9.5" fill="#DC2626">⚠ 任一前置门禁失败 → 在 booti 之前硬停止。不在不可控状态上继续猜测。</text>
+</svg>

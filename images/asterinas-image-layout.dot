@@ -1,0 +1,133 @@
+digraph AsterinasImageLayout {
+  graph [
+    rankdir=TB,
+    bgcolor="transparent",
+    pad="0.22",
+    nodesep="0.45",
+    ranksep="0.50",
+    splines=polyline,
+    outputorder=edgesfirst,
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif",
+    fontsize=14
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    color="#475569",
+    penwidth=1.4,
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif",
+    fontcolor="#172033",
+    fontsize=12,
+    margin="0.13,0.10"
+  ];
+
+  edge [
+    color="#475569",
+    penwidth=1.6,
+    arrowsize=0.75,
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif",
+    fontcolor="#334155",
+    fontsize=11
+  ];
+
+  subgraph cluster_wrong {
+    label="错误做法（v3）：链接后再拼接 64 字节 header";
+    color="#A44962";
+    fontcolor="#8B2543";
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif";
+    fontsize=13;
+    style="rounded,dashed";
+    penwidth=1.2;
+    margin=14;
+
+    w_hdr [
+      fillcolor="#F7E3E8",
+      color="#A44962",
+      label=<
+        <B>文件偏移 0x0000：拼接的 header（64 字节）</B><BR/>
+        <FONT POINT-SIZE="10.5">magic "RSC\x05" · image_size · flags</FONT>
+      >
+    ];
+
+    w_start [
+      fillcolor="#F7E3E8",
+      color="#A44962",
+      label=<
+        <B>文件偏移 0x0040：原有的 _start 入口代码</B><BR/>
+        <FONT POINT-SIZE="10.5" COLOR="#A44962"><I>链接器以为它在 0x0000，实际在 0x0040</I></FONT>
+      >
+    ];
+
+    w_pt [
+      fillcolor="#F7E3E8",
+      color="#A44962",
+      label=<
+        <B>文件偏移 0x1040：Sv48 根页表</B><BR/>
+        <FONT POINT-SIZE="10.5" COLOR="#A44962"><I>链接器以为它在 0x1000，实际在 0x1040</I></FONT>
+      >
+    ];
+
+    w_satp [
+      fillcolor="#FFF4F6",
+      color="#D49AAA",
+      label=<
+        <B>satp 按 4 KiB 对齐 → 读取 0x1000</B><BR/>
+        <FONT POINT-SIZE="10.5" COLOR="#A44962">实际页表在 0x1040，差 64 字节 → 读到的是上一页的尾部垃圾</FONT>
+      >
+    ];
+
+    w_hdr -> w_start -> w_pt;
+    w_pt -> w_satp [label="satp 指向 0x1000，但页表在 0x1040", color="#A44962", penwidth=2.0];
+  }
+
+  subgraph cluster_right {
+    label="正确做法（当前实现）：header 是链接布局的一部分";
+    color="#3E8055";
+    fontcolor="#265538";
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif";
+    fontsize=13;
+    style="rounded,dashed";
+    penwidth=1.2;
+    margin=14;
+
+    r_hdr [
+      fillcolor="#E2F4E8",
+      color="#3E8055",
+      label=<
+        <B>文件偏移 0x0000：_start = header（64 字节）</B><BR/>
+        <FONT POINT-SIZE="10.5">jal x0,+0x40 · magic · image_size · flags</FONT>
+      >
+    ];
+
+    r_body [
+      fillcolor="#E2F4E8",
+      color="#3E8055",
+      label=<
+        <B>文件偏移 0x0040：bsp_boot_body</B><BR/>
+        <FONT POINT-SIZE="10.5">构造页表 · 写 satp · 切换高半地址</FONT>
+      >
+    ];
+
+    r_pt [
+      fillcolor="#E2F4E8",
+      color="#3E8055",
+      label=<
+        <B>文件偏移 0x1000：Sv48 根页表（balign 4096）</B><BR/>
+        <FONT POINT-SIZE="10.5" COLOR="#265538">链接器保证 4 KiB 对齐</FONT>
+      >
+    ];
+
+    r_satp [
+      fillcolor="#F2FAF4",
+      color="#86B795",
+      label=<
+        <B>satp 按 4 KiB 对齐 → 读取 0x1000</B><BR/>
+        <FONT POINT-SIZE="10.5" COLOR="#265538">页表精确在 0x1000 → 正确</FONT>
+      >
+    ];
+
+    r_hdr -> r_body -> r_pt;
+    r_pt -> r_satp [label="satp 指向 0x1000，页表精确在此", color="#3E8055", penwidth=2.0];
+  }
+}

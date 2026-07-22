@@ -1,0 +1,4 @@
+<figure>
+  <img src="/images/asterinas-memory-map.svg" alt="Megrez 物理内存布局" style="max-width:100%;height:auto;" />
+  <figcaption>Megrez 物理内存布局（16 GiB DRAM）：OpenSBI、Asterinas Image、initramfs 占据低位地址；可用物理内存（~13.6 GiB）占据中段；固件保留区、U-Boot LMB、DTB、framebuffer 聚集在高位。Asterinas 的 frame allocator 只能管理标记为可用的区域。</figcaption>
+</figure>

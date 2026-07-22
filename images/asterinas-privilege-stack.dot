@@ -1,0 +1,152 @@
+digraph AsterinasPrivilegeStack {
+  graph [
+    rankdir=TB,
+    bgcolor="transparent",
+    pad="0.25",
+    nodesep="0.35",
+    ranksep="0.20",
+    splines=polyline,
+    outputorder=edgesfirst,
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif",
+    fontsize=14
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    color="#475569",
+    penwidth=1.4,
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif",
+    fontcolor="#172033",
+    fontsize=12,
+    margin="0.14,0.10"
+  ];
+
+  edge [
+    color="#475569",
+    penwidth=1.6,
+    arrowsize=0.8,
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif",
+    fontcolor="#334155",
+    fontsize=10.5
+  ];
+
+  subgraph cluster_hardware {
+    label="硬件层（不受软件控制）";
+    color="#64748B";
+    fontcolor="#475569";
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif";
+    fontsize=12;
+    style="rounded,dashed";
+    penwidth=1.2;
+    margin=12;
+
+    hw [
+      shape=plaintext,
+      fillcolor="transparent",
+      label=<
+        <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="4">
+          <TR>
+            <TD><FONT POINT-SIZE="12"><B>EIC7700 SoC</B></FONT></TD>
+            <TD><FONT POINT-SIZE="10.5">4 × RISC-V core · LPDDR5 控制器 · PLIC · CLINT</FONT></TD>
+          </TR>
+          <TR>
+            <TD><FONT POINT-SIZE="12"><B>外设</B></FONT></TD>
+            <TD><FONT POINT-SIZE="10.5">DesignWare UART · HDMI 显示 · SD 卡控制器 · PMIC</FONT></TD>
+          </TR>
+        </TABLE>
+      >
+    ];
+  }
+
+  subgraph cluster_mmode {
+    label="M-mode（Machine mode — 最高特权级）";
+    color="#A44962";
+    fontcolor="#8B2543";
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif";
+    fontsize=12;
+    style="rounded,dashed";
+    penwidth=1.2;
+    margin=14;
+
+    mmode_bootrom [
+      fillcolor="#F7E3E8",
+      color="#A44962",
+      label=<
+        <B>Boot ROM</B><BR/>
+        <FONT POINT-SIZE="10">上电复位向量 · DDR 初始化 · 加载 OpenSBI</FONT>
+      >
+    ];
+
+    mmode_sbi [
+      fillcolor="#F7E3E8",
+      color="#A44962",
+      label=<
+        <B>OpenSBI（驻留固件）</B><BR/>
+        <FONT POINT-SIZE="10">控制台 I/O · 定时器 · 核间中断（IPI）· 系统复位</FONT><BR/>
+        <FONT POINT-SIZE="10">HSM（Hart State Management）· PMU · 安全扩展</FONT>
+      >
+    ];
+
+    mmode_bootrom -> mmode_sbi [label="跳转"];
+  }
+
+  subgraph cluster_smode {
+    label="S-mode（Supervisor mode — 操作系统所在特权级）";
+    color="#2F6FA3";
+    fontcolor="#1e4d75";
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif";
+    fontsize=12;
+    style="rounded,dashed";
+    penwidth=1.2;
+    margin=14;
+
+    smode_uboot [
+      fillcolor="#DCEEFF",
+      color="#2F6FA3",
+      label=<
+        <B>U-Boot（临时 bootloader）</B><BR/>
+        <FONT POINT-SIZE="10">从 SD 卡加载 Image · DTB · initramfs 到 DRAM</FONT><BR/>
+        <FONT POINT-SIZE="10">修正 /chosen 节点 · booti 跳转到内核入口</FONT>
+      >
+    ];
+
+    smode_kernel [
+      fillcolor="#DCEEFF",
+      color="#2F6FA3",
+      label=<
+        <B>Asterinas 内核（持久 OS）</B><BR/>
+        <FONT POINT-SIZE="10">页表管理 · 内存分配 · 进程调度 · 驱动 · VFS · syscall</FONT>
+      >
+    ];
+
+    smode_uboot -> smode_kernel [label="booti\n交出控制权"];
+  }
+
+  subgraph cluster_umode {
+    label="U-mode（User mode — 最低特权级）";
+    color="#3E8055";
+    fontcolor="#265538";
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif";
+    fontsize=12;
+    style="rounded,dashed";
+    penwidth=1.2;
+    margin=12;
+
+    umode_init [
+      fillcolor="#E2F4E8",
+      color="#3E8055",
+      label=<
+        <B>/init → shell → 用户程序</B><BR/>
+        <FONT POINT-SIZE="10">只能通过 ecall（syscall）请求内核服务</FONT>
+      >
+    ];
+  }
+
+  /* Cross-layer service arrows */
+  mmode_sbi -> smode_uboot [label="提供 SBI 服务\n（定时器、控制台、复位）" style=dashed, color="#A44962", penwidth=1.4, constraint=false];
+  mmode_sbi -> smode_kernel [label="提供 SBI 服务\n（整个内核生命周期）" style=dashed, color="#A44962", penwidth=1.6, constraint=false];
+  smode_kernel -> umode_init [label="提供 syscall 服务\n（文件 I/O、进程、内存）" style=dashed, color="#2F6FA3", penwidth=1.4, constraint=false];
+
+  /* Vertical layout already provided by cluster containment */
+}
