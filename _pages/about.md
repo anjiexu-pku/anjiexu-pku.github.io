@@ -55,6 +55,13 @@ SkillTester is an agent-driven benchmark system for evaluating agent skills from
 Blog
 ======
 
+<div class="latest-work-card">
+  <p class="latest-work-card__eyebrow">Latest Systems Work · July 2026</p>
+  <h3 class="latest-work-card__title">Booting Asterinas on real RISC-V hardware</h3>
+  <p class="latest-work-card__summary">From U-Boot's <code>booti</code> handoff through early virtual memory, OSTD/SMP, rootfs, and PID 1 on Milk-V Megrez.</p>
+  <a class="latest-work-card__link" href="{% post_url 2026-07-23-booting-asterinas-riscv-megrez %}">Read how we booted an OS <span aria-hidden="true">→</span></a>
+</div>
+
 {% for post in site.posts %}
 - **{{ post.date | date: "%Y-%m-%d" }}** — [{{ post.title }}]({{ post.url }})
 {% endfor %}
