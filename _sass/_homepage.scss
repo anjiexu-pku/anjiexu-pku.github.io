@@ -104,3 +104,53 @@
     padding: 0.65rem;
   }
 }
+
+/* ==========================================================================
+   Homepage feature callouts
+   ========================================================================== */
+
+.latest-work-card {
+  margin: 0.5em 0 1.75em;
+  padding: 1em 1.1em;
+  border: 1px solid $border-color;
+  border-left: 0.25rem solid $info-color;
+  border-radius: $border-radius;
+  background: mix(#fff, $info-color, 94%);
+  box-shadow: 0 1px 1px rgba($info-color, 0.15);
+
+  &__eyebrow {
+    margin: 0 0 0.45em !important;
+    color: mix(#000, $info-color, 22%);
+    font-size: $type-size-7 !important;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  &__title {
+    margin: 0 0 0.45em;
+    font-size: $type-size-5;
+  }
+
+  &__summary {
+    margin-bottom: 0.75em !important;
+  }
+
+  &__link {
+    display: inline-flex;
+    gap: 0.35em;
+    align-items: center;
+    color: $link-color;
+    font-size: $type-size-6;
+    font-weight: 700;
+    text-decoration: none !important;
+  }
+
+  @include breakpoint(max-width $small) {
+    padding: 0.9em;
+
+    &__title {
+      line-height: 1.35;
+    }
+  }
+}
