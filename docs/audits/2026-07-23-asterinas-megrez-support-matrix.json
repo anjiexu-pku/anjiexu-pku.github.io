@@ -1,0 +1,95 @@
+{
+  "audit_date": "2026-07-23",
+  "subject": "TankTechnology Asterinas bring-up on Milk-V Megrez",
+  "claims": [
+    {
+      "id": "interactive-shell",
+      "claim": "Asterinas reached an interactive tty0 BusyBox shell on a physical Milk-V Megrez RISC-V board.",
+      "classification": "support",
+      "sample_universe": "One controlled RAM-only physical canary using commit 43901d2cb304b543c438614712186bc3e05bc0a1, backed by the earlier append-only board evidence sequence.",
+      "metric_definition": "Kernel reaches rootfs readiness; tty0 presents the BusyBox shell; an operator completes basic local interaction during the same candidate run.",
+      "denominator_or_comparator": "One frozen physical candidate run; QEMU is used only for shared downstream input and terminal behavior, not as a substitute for the Megrez hardware result.",
+      "sources": [
+        "/home/ubuntu/xaj/Program/asterinas/docs/porting/README.md",
+        "/home/ubuntu/xaj/Program/asterinas/docs/porting/evidence/2026-07-23-megrez-local-console-keyboard.md",
+        "/home/ubuntu/xaj/Program/asterinas/docs/porting/evidence/megrez-history-index.md"
+      ],
+      "safe_wording": "Brought Asterinas up on a Milk-V Megrez RISC-V board to an interactive tty0 BusyBox shell.",
+      "banned_wording": [
+        "Asterinas fully supports Milk-V Megrez",
+        "production-ready Megrez support"
+      ]
+    },
+    {
+      "id": "display-and-keyboard-path",
+      "claim": "The physical run reused the U-Boot framebuffer and accepted basic input through the Megrez DWC3/xHCI, onboard VIA hub, and one boot-time-connected USB HID Boot Protocol keyboard.",
+      "classification": "caution",
+      "sample_universe": "The same controlled physical canary plus QEMU and Linux UHID/evdev oracle tests for shared keyboard and TTY behavior.",
+      "metric_definition": "Framebuffer metadata passes the RAM-only canary gate; the local shell is visible; the operator confirms character, modifier, Enter, single Backspace, navigation, and Ctrl-C behavior.",
+      "denominator_or_comparator": "One physical keyboard and one physical canary. The serial log proves boot and recovery but cannot record tty0 keystrokes or screen output.",
+      "sources": [
+        "/home/ubuntu/xaj/Program/asterinas/docs/porting/README.md",
+        "/home/ubuntu/xaj/Program/asterinas/docs/porting/evidence/2026-07-23-megrez-local-console-keyboard.md"
+      ],
+      "safe_wording": "The controlled integration reused the firmware framebuffer and demonstrated basic local USB-keyboard interaction.",
+      "banned_wording": [
+        "complete USB HID support",
+        "all USB keyboards work",
+        "full graphical console support"
+      ]
+    },
+    {
+      "id": "automatic-recovery",
+      "claim": "The controlled canary recovered to a fresh OpenSBI/U-Boot cycle and prompt after 180 seconds.",
+      "classification": "support",
+      "sample_universe": "The same controlled physical canary.",
+      "metric_definition": "The raw serial stream contains the new firmware epoch and final U-Boot prompt after the Asterinas candidate epoch.",
+      "denominator_or_comparator": "One run, with a single candidate booti and no persistent U-Boot environment write.",
+      "sources": [
+        "/home/ubuntu/xaj/Program/asterinas/docs/porting/README.md",
+        "/home/ubuntu/xaj/Program/asterinas/docs/porting/evidence/2026-07-23-megrez-local-console-keyboard.md"
+      ],
+      "safe_wording": "The RAM-only canary completed its controlled recovery back to U-Boot.",
+      "banned_wording": [
+        "watchdog-proven recovery",
+        "failure-proof recovery"
+      ]
+    },
+    {
+      "id": "first-ever",
+      "claim": "This is the first-ever boot of Asterinas on a RISC-V development board or on Milk-V Megrez.",
+      "classification": "fail",
+      "sample_universe": "Public web search and the current upstream Asterinas tree.",
+      "metric_definition": "A priority claim would require a comprehensive historical comparison and a definition of boot success.",
+      "denominator_or_comparator": "No complete comparison universe is available. Asterinas already documents RISC-V and SiFive HiFive Unleashed support.",
+      "sources": [
+        "https://github.com/asterinas/asterinas",
+        "https://asterinas.github.io/2025/12/19/announcing-asterinas-0.17.0.html"
+      ],
+      "safe_wording": "A new Megrez bring-up milestone for our Asterinas RISC-V work.",
+      "banned_wording": [
+        "world first",
+        "first Asterinas RISC-V board boot",
+        "first-ever Asterinas hardware boot"
+      ]
+    },
+    {
+      "id": "official-support",
+      "claim": "Milk-V Megrez is an officially supported Asterinas board.",
+      "classification": "fail",
+      "sample_universe": "Upstream Asterinas documentation and the local development branch.",
+      "metric_definition": "Official support requires upstream acceptance, maintained documentation, test coverage, and a declared support tier or board contract.",
+      "denominator_or_comparator": "The local branch is 333 commits ahead of upstream/main and its origin is not publicly accessible without credentials.",
+      "sources": [
+        "/home/ubuntu/xaj/Program/asterinas/docs/porting/README.md",
+        "https://github.com/asterinas/asterinas"
+      ],
+      "safe_wording": "A controlled integration result on a development branch; not official Megrez support.",
+      "banned_wording": [
+        "official Megrez support",
+        "upstream-supported Megrez port",
+        "Asterinas now supports Megrez"
+      ]
+    }
+  ]
+}
