@@ -1,0 +1,196 @@
+digraph AsterinasBootFlow {
+  graph [
+    rankdir=TB,
+    bgcolor="transparent",
+    pad="0.23",
+    nodesep="0.40",
+    ranksep="0.48",
+    splines=polyline,
+    outputorder=edgesfirst,
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif",
+    fontsize=14
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    color="#475569",
+    penwidth=1.4,
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif",
+    fontcolor="#172033",
+    fontsize=12,
+    margin="0.13,0.09"
+  ];
+
+  edge [
+    color="#475569",
+    penwidth=1.6,
+    arrowsize=0.75,
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif",
+    fontcolor="#334155",
+    fontsize=10.5
+  ];
+
+  /* Physical address phase */
+  phys_start [
+    shape=oval,
+    fillcolor="#FFF0C9",
+    color="#A36B10",
+    label=<
+      <B>物理地址阶段</B><BR/>
+      <FONT POINT-SIZE="10">U-Boot booti 跳转到 0x80200000</FONT>
+    >
+  ];
+
+  jal_header [
+    fillcolor="#DCEEFF",
+    color="#2F6FA3",
+    label=<
+      <B>_start：jal x0, +0x40</B><BR/>
+      <FONT POINT-SIZE="10">跳过 64 字节 Image header</FONT>
+    >
+  ];
+
+  save_regs [
+    fillcolor="#DCEEFF",
+    color="#2F6FA3",
+    label=<
+      <B>保存 a0（hart ID）与 a1（DTB 指针）</B><BR/>
+      <FONT POINT-SIZE="10">U-Boot 传的参数，Rust 入口需要</FONT>
+    >
+  ];
+
+  build_pt [
+    fillcolor="#DCEEFF",
+    color="#2F6FA3",
+    label=<
+      <B>构造 Sv48 早期页表</B><BR/>
+      <FONT POINT-SIZE="10">identity map（0~512 GiB）+ high-half map（0xffff_ff...）</FONT><BR/>
+      <FONT POINT-SIZE="10">用 1 GiB 巨页覆盖内核代码段</FONT>
+    >
+  ];
+
+  write_satp [
+    fillcolor="#E2F4E8",
+    color="#3E8055",
+    label=<
+      <B>csrw satp, t0</B><BR/>
+      <FONT POINT-SIZE="10">写入 Sv48 根页表物理地址 + mode=9</FONT>
+    >
+  ];
+
+  check_satp [
+    shape=diamond,
+    fillcolor="#FFF0C9",
+    color="#A36B10",
+    label=<
+      <B>csrr t1, satp</B><BR/>
+      <FONT POINT-SIZE="10">读回的值等于写入的值？</FONT>
+    >
+  ];
+
+  sv48_ok [
+    fillcolor="#E2F4E8",
+    color="#3E8055",
+    label="Sv48 被硬件接受"
+  ];
+
+  try_sv39 [
+    fillcolor="#F7E3E8",
+    color="#A44962",
+    label=<
+      <B>尝试 Sv39</B><BR/>
+      <FONT POINT-SIZE="10">csrw satp, Sv39</FONT>
+    >
+  ];
+
+  check_sv39 [
+    shape=diamond,
+    fillcolor="#F7E3E8",
+    color="#A44962",
+    label=<
+      <B>读回 satp</B><BR/>
+      <FONT POINT-SIZE="10">Sv39 被接受？</FONT>
+    >
+  ];
+
+  dead [
+    fillcolor="#F7E3E8",
+    color="#A44962",
+    label=<
+      <B>bsp_unreachable_pa：死循环</B><BR/>
+      <FONT POINT-SIZE="10">CPU 既不支持 Sv48 也不支持 Sv39</FONT>
+    >
+  ];
+
+  flush_tlb [
+    fillcolor="#DCEEFF",
+    color="#2F6FA3",
+    label=<
+      <B>sfence.vma</B><BR/>
+      <FONT POINT-SIZE="10">清空 TLB，新页表生效</FONT>
+    >
+  ];
+
+  high_half [
+    fillcolor="#DCEEFF",
+    color="#2F6FA3",
+    label=<
+      <B>切换到高半地址</B><BR/>
+      <FONT POINT-SIZE="10">SP = boot_stack_top | 0xffff_ff00_0000_0000</FONT><BR/>
+      <FONT POINT-SIZE="10">PC = bsp_boot_virt | 0xffff_ff00_0000_0000</FONT>
+    >
+  ];
+
+  init_gp [
+    fillcolor="#DCEEFF",
+    color="#2F6FA3",
+    label=<
+      <B>初始化 GP（CPU-local 存储基址）</B>
+    >
+  ];
+
+  jump_rust [
+    fillcolor="#E2F4E8",
+    color="#3E8055",
+    shape=oval,
+    label=<
+      <B>jr t0 → riscv_boot()</B><BR/>
+      <FONT POINT-SIZE="10">终于进入 Rust 世界</FONT>
+    >
+  ];
+
+  /* Edges */
+  phys_start -> jal_header;
+  jal_header -> save_regs;
+  save_regs -> build_pt;
+  build_pt -> write_satp;
+  write_satp -> check_satp;
+
+  check_satp -> sv48_ok [label="是"];
+  check_satp -> try_sv39 [label="否"];
+
+  try_sv39 -> check_sv39;
+  check_sv39 -> flush_tlb [label="是"];
+  check_sv39 -> dead [label="否"];
+
+  sv48_ok -> flush_tlb;
+  flush_tlb -> high_half;
+  high_half -> init_gp;
+  init_gp -> jump_rust;
+
+  /* Annotation for the satp gate */
+  subgraph cluster_satp_gate {
+    label="「satp 单向门」：写完 satp 后，所有地址立即变为虚拟地址\n如果页表有错，连 SBI 控制台输出都不可能——CPU 只会静默";
+    color="#8B5CF6";
+    fontcolor="#6D28D9";
+    fontname="Source Han Sans CN, Noto Sans CJK SC, sans-serif";
+    fontsize=11.5;
+    style="rounded,dashed";
+    penwidth=1.4;
+    margin=12;
+
+    gate_marker [shape=point, width=0];
+    write_satp -> gate_marker [style=invis];
+  }
+}

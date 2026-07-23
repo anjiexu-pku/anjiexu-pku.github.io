@@ -1,0 +1,279 @@
+<figure class="cp-research-map" data-cam-map data-active-lens="overview" aria-labelledby="cam-map-caption">
+  <div class="cp-map__controls" role="tablist" aria-label="计算摄像论文的数学视角">
+    <button class="is-active" type="button" id="cam-map-tab-overview" role="tab" aria-selected="true" aria-controls="cam-map-panel-overview" data-cam-lens="overview">总览</button>
+    <button type="button" id="cam-map-tab-geometry" role="tab" aria-selected="false" aria-controls="cam-map-panel-geometry" data-cam-lens="geometry">几何</button>
+    <button type="button" id="cam-map-tab-optics" role="tab" aria-selected="false" aria-controls="cam-map-panel-optics" data-cam-lens="optics">光学与曝光</button>
+    <button type="button" id="cam-map-tab-rays" role="tab" aria-selected="false" aria-controls="cam-map-panel-rays" data-cam-lens="rays">光线场</button>
+    <button type="button" id="cam-map-tab-photometry" role="tab" aria-selected="false" aria-controls="cam-map-panel-photometry" data-cam-lens="photometry">光度分解</button>
+    <button type="button" id="cam-map-tab-codesign" role="tab" aria-selected="false" aria-controls="cam-map-panel-codesign" data-cam-lens="codesign">测量联合设计</button>
+  </div>
+
+  <div class="cp-map__diagram" aria-label="世界生成相机观测以及模型从观测推断不同物理变量的非串行拓扑">
+    <svg viewBox="0 0 1160 720" role="img" aria-labelledby="cam-map-svg-title cam-map-svg-desc" xmlns="http://www.w3.org/2000/svg">
+      <title id="cam-map-svg-title">计算摄像学的生成过程、推断分支与测量联合设计</title>
+      <desc id="cam-map-svg-desc">潜在世界先产生光线场，再由几何、光学和曝光共同定义的测量算子产生像素观测。推断侧从同一观测并行估计几何、清晰辐照、光线场或光度属性。参考目标和损失只在训练中出现，联合设计分支用任务风险反向选择测量参数。</desc>
+      <defs>
+        <marker id="cam-map-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path fill="context-stroke" d="M 0 0 L 10 5 L 0 10 z" />
+        </marker>
+        <marker id="cam-map-arrow-dashed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path fill="context-stroke" d="M 0 0 L 10 5 L 0 10 z" />
+        </marker>
+      </defs>
+
+      <g class="cp-map__route" data-cam-route="world geometry optics rays photometry codesign">
+        <text class="cp-map__section-label" x="42" y="30">世界与相机: 数据怎样生成</text>
+        <g class="cp-map__node cp-map__node--world">
+          <rect x="42" y="55" width="185" height="76" rx="7" />
+          <text x="134" y="84">潜在世界 X</text>
+          <text class="cp-map__node-subtitle" x="134" y="108">形状 · 材质 · 光照 · 运动</text>
+        </g>
+        <path class="cp-map__edge cp-map__edge--photometry" d="M 227 93 L 300 93" marker-end="url(#cam-map-arrow)" />
+        <text class="cp-map__edge-label" x="244" y="78">render</text>
+        <g class="cp-map__node cp-map__node--rays" data-cam-select="rays" role="button" tabindex="0" aria-label="查看光线场论文">
+          <title>查看光线场论文</title>
+          <rect x="300" y="55" width="190" height="76" rx="7" />
+          <text x="395" y="84">光线场 L</text>
+          <text class="cp-map__node-subtitle" x="395" y="108">位置 · 方向 · 波长 · 时间</text>
+        </g>
+        <path class="cp-map__edge cp-map__edge--optics" d="M 490 93 L 565 93" marker-end="url(#cam-map-arrow)" />
+        <g class="cp-map__node cp-map__node--measurement" data-cam-select="optics" role="button" tabindex="0" aria-label="查看光学与曝光论文">
+          <title>查看光学与曝光论文</title>
+          <rect x="565" y="47" width="232" height="92" rx="7" />
+          <text x="681" y="78">测量算子 M_a</text>
+          <text class="cp-map__node-subtitle" x="681" y="101">投影 · PSF · 孔径 · 曝光</text>
+          <text class="cp-map__node-subtitle" x="681" y="119">动作 a 决定测什么</text>
+        </g>
+        <path class="cp-map__edge cp-map__edge--observation" d="M 797 93 L 872 93" marker-end="url(#cam-map-arrow)" />
+        <g class="cp-map__node cp-map__node--observation">
+          <rect x="872" y="55" width="190" height="76" rx="7" />
+          <text x="967" y="84">像素观测 R</text>
+          <text class="cp-map__node-subtitle" x="967" y="108">Poisson · read noise · quantization</text>
+        </g>
+      </g>
+
+      <g class="cp-map__route" data-cam-route="world photometry">
+        <path class="cp-map__edge cp-map__edge--supervision" d="M 134 131 C 150 188, 182 205, 252 207" marker-end="url(#cam-map-arrow-dashed)" />
+        <g class="cp-map__node cp-map__node--target">
+          <rect x="252" y="174" width="206" height="66" rx="7" />
+          <text x="355" y="201">参考目标 T</text>
+          <text class="cp-map__node-subtitle" x="355" y="222">深度 · HDR · 法线 · 新视角</text>
+        </g>
+      </g>
+
+      <rect class="cp-map__boundary" x="38" y="280" width="1084" height="282" rx="8" />
+      <text class="cp-map__boundary-label" x="580" y="307">从同一组观测出发的四类后验推断, 不是一条串行网络</text>
+
+      <g class="cp-map__route" data-cam-route="geometry">
+        <path class="cp-map__edge cp-map__edge--geometry" d="M 927 131 C 825 220, 386 258, 208 346" marker-end="url(#cam-map-arrow)" />
+        <g class="cp-map__node cp-map__node--geometry" data-cam-select="geometry" role="button" tabindex="0" aria-label="查看几何论文">
+          <title>查看几何论文</title>
+          <rect x="82" y="346" width="252" height="78" rx="7" />
+          <text x="208" y="375">几何后验 q(G | R)</text>
+          <text class="cp-map__node-subtitle" x="208" y="399">depth · pose · pointmap</text>
+        </g>
+        <path class="cp-map__edge cp-map__edge--geometry" d="M 208 424 L 208 475" marker-end="url(#cam-map-arrow)" />
+      </g>
+
+      <g class="cp-map__route" data-cam-route="optics codesign">
+        <path class="cp-map__edge cp-map__edge--optics" d="M 955 131 C 856 236, 610 258, 454 346" marker-end="url(#cam-map-arrow)" />
+        <g class="cp-map__node cp-map__node--optics" data-cam-select="optics" role="button" tabindex="0" aria-label="查看光学与曝光论文">
+          <title>查看光学与曝光论文</title>
+          <rect x="354" y="346" width="252" height="78" rx="7" />
+          <text x="480" y="375">辐照后验 q(S | R,a)</text>
+          <text class="cp-map__node-subtitle" x="480" y="399">deblur · denoise · HDR</text>
+        </g>
+        <path class="cp-map__edge cp-map__edge--optics" d="M 480 424 L 480 475" marker-end="url(#cam-map-arrow)" />
+      </g>
+
+      <g class="cp-map__route" data-cam-route="rays">
+        <path class="cp-map__edge cp-map__edge--rays" d="M 976 131 C 930 247, 785 275, 708 346" marker-end="url(#cam-map-arrow)" />
+        <g class="cp-map__node cp-map__node--rays" data-cam-select="rays" role="button" tabindex="0" aria-label="查看光线场论文">
+          <title>查看光线场论文</title>
+          <rect x="626" y="346" width="252" height="78" rx="7" />
+          <text x="752" y="375">光线后验 q(L | R,a)</text>
+          <text class="cp-map__node-subtitle" x="752" y="399">focal stack · LF · radiance field</text>
+        </g>
+        <path class="cp-map__edge cp-map__edge--rays" d="M 752 424 L 752 475" marker-end="url(#cam-map-arrow)" />
+      </g>
+
+      <g class="cp-map__route" data-cam-route="photometry">
+        <path class="cp-map__edge cp-map__edge--photometry" d="M 996 131 C 1000 220, 1018 275, 1012 346" marker-end="url(#cam-map-arrow)" />
+        <g class="cp-map__node cp-map__node--photometry" data-cam-select="photometry" role="button" tabindex="0" aria-label="查看光度分解论文">
+          <title>查看光度分解论文</title>
+          <rect x="898" y="346" width="194" height="78" rx="7" />
+          <text x="995" y="375">光度后验</text>
+          <text class="cp-map__node-subtitle" x="995" y="399">q(rho,n,light,BRDF | R)</text>
+        </g>
+        <path class="cp-map__edge cp-map__edge--photometry" d="M 995 424 L 995 475" marker-end="url(#cam-map-arrow)" />
+      </g>
+
+      <g class="cp-map__route" data-cam-route="geometry optics rays photometry codesign">
+        <g class="cp-map__node cp-map__node--decision">
+          <rect x="350" y="475" width="460" height="66" rx="7" />
+          <text x="580" y="502">任务决策 delta(R,a)</text>
+          <text class="cp-map__node-subtitle" x="580" y="524">重建 · 测量 · 新视角 · relighting · recognition</text>
+        </g>
+        <path class="cp-map__edge cp-map__edge--geometry" d="M 208 475 L 350 508" marker-end="url(#cam-map-arrow)" />
+        <path class="cp-map__edge cp-map__edge--photometry" d="M 995 475 L 810 508" marker-end="url(#cam-map-arrow)" />
+      </g>
+
+      <g class="cp-map__route" data-cam-route="world geometry optics rays photometry codesign">
+        <path class="cp-map__edge cp-map__edge--supervision" d="M 355 240 C 330 300, 310 560, 455 616" marker-end="url(#cam-map-arrow-dashed)" />
+        <path class="cp-map__edge cp-map__edge--supervision" d="M 580 541 L 580 596" marker-end="url(#cam-map-arrow-dashed)" />
+        <g class="cp-map__loss">
+          <rect x="455" y="596" width="250" height="62" rx="7" />
+          <text x="580" y="622">任务损失 ell(delta,T)</text>
+          <text class="cp-map__node-subtitle" x="580" y="643">training / evaluation only</text>
+        </g>
+      </g>
+
+      <g class="cp-map__route" data-cam-route="codesign">
+        <path class="cp-map__edge cp-map__edge--codesign" d="M 705 628 C 995 680, 1122 505, 1075 248 C 1050 190, 875 174, 735 139" marker-end="url(#cam-map-arrow-dashed)" />
+        <text class="cp-map__edge-label cp-map__edge-label--codesign" x="965" y="645">optimize acquisition a</text>
+      </g>
+    </svg>
+  </div>
+
+  <section class="cp-map__detail" aria-live="polite">
+    <div class="cp-map__panel is-active" id="cam-map-panel-overview" role="tabpanel" aria-labelledby="cam-map-tab-overview" data-cam-panel="overview">
+      <p class="cp-map__panel-kicker">Topology</p>
+      <p class="cp-map__panel-title">先分清“世界怎样生成像素”和“模型怎样解释像素”</p>
+      <p>几何、光学、光线场和光度分解不是四个串行模块，而是从同一观测出发、面向不同潜变量的后验问题。实线是运行时的数据或推断关系；灰色虚线是训练目标；红色回路表示根据任务风险反向设计曝光、孔径、焦点或编码光学。</p>
+    </div>
+
+    <div class="cp-map__panel" id="cam-map-panel-geometry" role="tabpanel" aria-labelledby="cam-map-tab-geometry" data-cam-panel="geometry" hidden>
+      <p class="cp-map__panel-kicker">Geometry posterior</p>
+      <p class="cp-map__panel-title">网络在近似对应、三角化和 bundle adjustment</p>
+      <p>SfM-Learner 把重投影写成自监督；DROID-SLAM 把 dense BA 放进可微迭代；BARF 联合优化位姿与辐射场；DUSt3R 直接回归 pointmap，再用全局对齐恢复共同坐标系。</p>
+      <p class="cp-map__paper-links">
+        <a href="https://openaccess.thecvf.com/content_cvpr_2017/html/Zhou_Unsupervised_Learning_of_CVPR_2017_paper.html" target="_blank" rel="noopener noreferrer">SfM-Learner [4]</a><span aria-hidden="true"> · </span>
+        <a href="https://proceedings.neurips.cc/paper_files/paper/2021/hash/89fcd07f20b6785b92134bd6c1d0fa42-Abstract.html" target="_blank" rel="noopener noreferrer">DROID-SLAM [5]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content/ICCV2021/html/Lin_BARF_Bundle-Adjusting_Neural_Radiance_Fields_ICCV_2021_paper.html" target="_blank" rel="noopener noreferrer">BARF [6]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content/CVPR2024/html/Wang_DUSt3R_Geometric_3D_Vision_Made_Easy_CVPR_2024_paper.html" target="_blank" rel="noopener noreferrer">DUSt3R [7]</a>
+      </p>
+    </div>
+
+    <div class="cp-map__panel" id="cam-map-panel-optics" role="tabpanel" aria-labelledby="cam-map-tab-optics" data-cam-panel="optics" hidden>
+      <p class="cp-map__panel-kicker">Optics and exposure</p>
+      <p class="cp-map__panel-title">PSF、光子预算和饱和决定 likelihood</p>
+      <p>Deep Optics 直接优化可制造的光学编码；SID 在短曝光 RAW 的 Poisson-Gaussian likelihood 下学习恢复；Dual/Quad Pixel 方法增加子孔径相位观测，缩小失焦反演的零空间。</p>
+      <p class="cp-map__paper-links">
+        <a href="https://openaccess.thecvf.com/content_ICCV_2019/html/Chang_Deep_Optics_for_Monocular_Depth_Estimation_and_3D_Object_Detection_ICCV_2019_paper.html" target="_blank" rel="noopener noreferrer">Deep Optics [8]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content_cvpr_2018/html/Chen_Learning_to_See_CVPR_2018_paper.html" target="_blank" rel="noopener noreferrer">SID [9]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content/ICCV2021/html/Abuolaim_Learning_To_Reduce_Defocus_Blur_by_Realistically_Modeling_Dual-Pixel_Data_ICCV_2021_paper.html" target="_blank" rel="noopener noreferrer">Dual Pixel [12]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content/CVPR2025/html/Chen_Quad-Pixel_Image_Defocus_Deblurring_A_New_Benchmark_and_Model_CVPR_2025_paper.html" target="_blank" rel="noopener noreferrer">Quad Pixel [13]</a>
+      </p>
+    </div>
+
+    <div class="cp-map__panel" id="cam-map-panel-rays" role="tabpanel" aria-labelledby="cam-map-tab-rays" data-cam-panel="rays" hidden>
+      <p class="cp-map__panel-kicker">Ray representation</p>
+      <p class="cp-map__panel-title">焦点堆栈、光场与 NeRF 保留的是不同结构</p>
+      <p>焦点堆栈提供多个 shear-and-integrate 投影；EPI 网络显式利用斜率；Light Field Network 直接参数化射线函数；NeRF 先参数化三维密度与方向相关辐射，再通过体渲染产生射线颜色。</p>
+      <p class="cp-map__paper-links">
+        <a href="https://cseweb.ucsd.edu/~viscomp/projects/LF/papers/SIGASIA16/" target="_blank" rel="noopener noreferrer">LF View Synthesis [16]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content_iccv_2017/html/Srinivasan_Learning_to_Synthesize_ICCV_2017_paper.html" target="_blank" rel="noopener noreferrer">4D RGBD LF [17]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content_cvpr_2018/html/Shin_EPINET_A_Fully-Convolutional_CVPR_2018_paper.html" target="_blank" rel="noopener noreferrer">EPINET [18]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content/CVPR2022/html/Yang_Deep_Depth_From_Focus_With_Differential_Focus_Volume_CVPR_2022_paper.html" target="_blank" rel="noopener noreferrer">DFV [19]</a><span aria-hidden="true"> · </span>
+        <a href="https://papers.nips.cc/paper/2021/hash/a11ce019e96a4c60832eadd755a17a58-Abstract.html" target="_blank" rel="noopener noreferrer">LFN [21]</a><span aria-hidden="true"> · </span>
+        <a href="https://arxiv.org/abs/2003.08934" target="_blank" rel="noopener noreferrer">NeRF [22]</a>
+      </p>
+    </div>
+
+    <div class="cp-map__panel" id="cam-map-panel-photometry" role="tabpanel" aria-labelledby="cam-map-tab-photometry" data-cam-panel="photometry" hidden>
+      <p class="cp-map__panel-kicker">Inverse rendering</p>
+      <p class="cp-map__panel-title">“看起来一致”不等于形状、材质和光照可辨识</p>
+      <p>PS-FCN 用对输入光照排列不敏感的聚合器处理多光照；UniPS 用全局 lighting context 替代显式标定；NeRFactor 与 TensoIR 则把法线、可见性、反照率、BRDF 和环境光写成受约束的神经场。</p>
+      <p class="cp-map__paper-links">
+        <a href="https://openaccess.thecvf.com/content_ECCV_2018/html/Guanying_Chen_PS-FCN_A_Flexible_ECCV_2018_paper.html" target="_blank" rel="noopener noreferrer">PS-FCN [23]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content/CVPR2022/html/Ikehata_Universal_Photometric_Stereo_Network_Using_Global_Lighting_Contexts_CVPR_2022_paper.html" target="_blank" rel="noopener noreferrer">UniPS [24]</a><span aria-hidden="true"> · </span>
+        <a href="https://xiuming.info/projects/nerfactor/" target="_blank" rel="noopener noreferrer">NeRFactor [25]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content/CVPR2023/html/Jin_TensoIR_Tensorial_Inverse_Rendering_CVPR_2023_paper.html" target="_blank" rel="noopener noreferrer">TensoIR [26]</a>
+      </p>
+    </div>
+
+    <div class="cp-map__panel" id="cam-map-panel-codesign" role="tabpanel" aria-labelledby="cam-map-tab-codesign" data-cam-panel="codesign" hidden>
+      <p class="cp-map__panel-kicker">Acquisition co-design</p>
+      <p class="cp-map__panel-title">最优相机由任务风险定义，而不只由“照片好看”定义</p>
+      <p>Deep Optics 优化镜片或相位编码；Neural Auto-Exposure 根据检测风险选择曝光；Neural Exposure Fusion 保留多曝光观测，在特征域按位置选择信息。它们共同修改的是测量动作 a，而不只是后端网络。</p>
+      <p class="cp-map__paper-links">
+        <a href="https://openaccess.thecvf.com/content_ICCV_2019/html/Chang_Deep_Optics_for_Monocular_Depth_Estimation_and_3D_Object_Detection_ICCV_2019_paper.html" target="_blank" rel="noopener noreferrer">Deep Optics [8]</a><span aria-hidden="true"> · </span>
+        <a href="https://light.princeton.edu/publication/neural_auto_exposure/" target="_blank" rel="noopener noreferrer">Neural Auto-Exposure [10]</a><span aria-hidden="true"> · </span>
+        <a href="https://openaccess.thecvf.com/content/CVPR2024/html/Onzon_Neural_Exposure_Fusion_for_High-Dynamic_Range_Object_Detection_CVPR_2024_paper.html" target="_blank" rel="noopener noreferrer">Neural Exposure Fusion [11]</a>
+      </p>
+    </div>
+  </section>
+
+  <figcaption id="cam-map-caption">
+    <b>图 1:</b> 统一问题架构。上半部分是世界到像素的生成过程，下半部分是从像素到不同物理变量的推断分支。实线表示运行时关系，灰色虚线表示训练参考与损失，红色虚线表示任务风险对测量参数的反向设计；点击节点或上方视角可查看对应论文。
+  </figcaption>
+</figure>
+
+<script>
+  (function () {
+    function initCameraMaps() {
+      document.querySelectorAll('[data-cam-map]').forEach(function (map) {
+        if (map.dataset.camReady === 'true') return;
+        map.dataset.camReady = 'true';
+        var controls = Array.from(map.querySelectorAll('[data-cam-lens]'));
+        var panels = Array.from(map.querySelectorAll('[data-cam-panel]'));
+        var selectableNodes = Array.from(map.querySelectorAll('[data-cam-select]'));
+
+        function activate(lens) {
+          map.dataset.activeLens = lens;
+          controls.forEach(function (control) {
+            var active = control.dataset.camLens === lens;
+            control.classList.toggle('is-active', active);
+            control.setAttribute('aria-selected', String(active));
+            control.tabIndex = active ? 0 : -1;
+          });
+          panels.forEach(function (panel) {
+            var active = panel.dataset.camPanel === lens;
+            panel.classList.toggle('is-active', active);
+            panel.hidden = !active;
+          });
+        }
+
+        controls.forEach(function (control) {
+          control.addEventListener('click', function () {
+            activate(control.dataset.camLens);
+          });
+          control.addEventListener('keydown', function (event) {
+            var index = controls.indexOf(control);
+            var nextIndex = null;
+            if (event.key === 'ArrowRight') nextIndex = (index + 1) % controls.length;
+            if (event.key === 'ArrowLeft') nextIndex = (index - 1 + controls.length) % controls.length;
+            if (event.key === 'Home') nextIndex = 0;
+            if (event.key === 'End') nextIndex = controls.length - 1;
+            if (nextIndex !== null) {
+              event.preventDefault();
+              controls[nextIndex].focus();
+              activate(controls[nextIndex].dataset.camLens);
+            }
+          });
+        });
+
+        selectableNodes.forEach(function (node) {
+          function selectNode() {
+            activate(node.dataset.camSelect);
+          }
+          node.addEventListener('click', selectNode);
+          node.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              selectNode();
+            }
+          });
+        });
+
+        activate(map.dataset.activeLens || 'overview');
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initCameraMaps);
+    } else {
+      initCameraMaps();
+    }
+  }());
+</script>

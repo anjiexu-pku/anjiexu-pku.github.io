@@ -1,0 +1,179 @@
+digraph LearnedISPResearchMap {
+  graph [
+    rankdir=TB,
+    bgcolor="transparent",
+    pad="0.22",
+    nodesep="0.38",
+    ranksep="0.58",
+    splines=polyline,
+    outputorder=edgesfirst,
+    fontname="Arial Unicode MS",
+    fontsize=14
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    color="#475569",
+    penwidth=1.4,
+    fontname="Arial Unicode MS",
+    fontcolor="#172033",
+    fontsize=13,
+    margin="0.15,0.11"
+  ];
+
+  edge [
+    color="#475569",
+    penwidth=1.6,
+    arrowsize=0.75,
+    fontname="Arial Unicode MS",
+    fontcolor="#334155",
+    fontsize=11
+  ];
+
+  scene [
+    fillcolor="#F1F5F9",
+    label=<
+      <B>潜在场景 X</B><BR/>
+      <FONT POINT-SIZE="11">辐照度 · 光谱 · 运动</FONT>
+    >
+  ];
+
+  raw [
+    fillcolor="#DCEEFF",
+    color="#2F6FA3",
+    label=<
+      <B>RAW 观测 R</B><BR/>
+      <FONT POINT-SIZE="11">CFA · 噪声 · 曝光 · metadata m</FONT>
+    >
+  ];
+
+  obs_papers [
+    shape=note,
+    fillcolor="#F4F9FF",
+    color="#8AB5D6",
+    fontsize=10.5,
+    label=<
+      <B>观测、先验与训练数据</B><BR ALIGN="LEFT"/>
+      FlexISP [1] · Khashabi [13-15]<BR ALIGN="LEFT"/>
+      Unprocessing / CycleISP [8,9]<BR ALIGN="LEFT"/>
+      RAW prior [24]
+    >
+  ];
+
+  subgraph cluster_learned_isp {
+    label="Learned ISP design space: q(theta,A)(Y | R,u)";
+    color="#7A8B99";
+    fontcolor="#334155";
+    fontname="Arial Unicode MS";
+    fontsize=13;
+    style="rounded,dashed";
+    penwidth=1.2;
+    margin=18;
+
+    representation [
+      fillcolor="#E2F4E8",
+      color="#3E8055",
+      label=<
+        <B>恢复表示 S / Z</B><BR/>
+        <FONT POINT-SIZE="11">去噪 · 去马赛克 · 线性颜色</FONT>
+      >
+    ];
+
+    restore_papers [
+      shape=note,
+      fillcolor="#F2FAF4",
+      color="#86B795",
+      fontsize=10.5,
+      label=<
+        <B>恢复器、空间算子与隐式先验</B><BR ALIGN="LEFT"/>
+        Deep Joint [2] · SID / LSID [4]<BR ALIGN="LEFT"/>
+        PnP / RED / DIP [16-20]<BR ALIGN="LEFT"/>
+        U-Net / Transformer [11,27-29]
+      >
+    ];
+
+    output [
+      fillcolor="#FFF0C9",
+      color="#A36B10",
+      label=<
+        <B>输出 Ŷ 或 q(Y | R)</B><BR/>
+        <FONT POINT-SIZE="11">tone · color · style · posterior sample</FONT>
+      >
+    ];
+
+    output_papers [
+      shape=note,
+      fillcolor="#FFF9E9",
+      color="#D3AE58",
+      fontsize=10.5,
+      label=<
+        <B>渲染、结构与条件分布</B><BR ALIGN="LEFT"/>
+        DeepISP / PyNET [3,5] · Controllable [12]<BR ALIGN="LEFT"/>
+        CameraNet / ReconfigISP [6,7]<BR ALIGN="LEFT"/>
+        InvISP / Learnable Dictionary [10,21]<BR ALIGN="LEFT"/>
+        Diffusion / DPS / Flow [30-36]<BR ALIGN="LEFT"/>
+        ISPDiffuser / RAW-Diffusion / RAW-Flow [37-39]<BR ALIGN="LEFT"/>
+        <FONT COLOR="#A44962">reverse ISP 建模 p( R | Y ), 返回 RAW 空间</FONT>
+      >
+    ];
+
+    { rank=same; representation; restore_papers; }
+    { rank=same; output; output_papers; }
+
+    representation -> output [label="渲染决策  q( Y | S,u )"];
+    restore_papers -> representation [
+      style=dashed,
+      color="#86B795",
+      arrowhead=none,
+      constraint=false
+    ];
+    output_papers -> output [
+      style=dashed,
+      color="#D3AE58",
+      arrowhead=none,
+      constraint=false
+    ];
+  }
+
+  consumer [
+    fillcolor="#F7E3E8",
+    color="#A44962",
+    label=<
+      <B>观看 / 下游任务</B><BR/>
+      <FONT POINT-SIZE="11">显示 · 检测 · 分割 · 3D</FONT>
+    >
+  ];
+
+  task_papers [
+    shape=note,
+    fillcolor="#FFF4F6",
+    color="#D49AAA",
+    fontsize=10.5,
+    label=<
+      <B>目标风险与系统成本</B><BR ALIGN="LEFT"/>
+      VisionISP / ISP4ML [22,23]<BR ALIGN="LEFT"/>
+      Hardware-in-the-loop [25]<BR ALIGN="LEFT"/>
+      Neural Auto-Exposure [26]
+    >
+  ];
+
+  { rank=same; raw; obs_papers; }
+  { rank=same; consumer; task_papers; }
+
+  scene -> raw [label="传感器似然  p( R | X,m )"];
+  raw -> representation [label="后验恢复  q( S | R,m )"];
+  output -> consumer [label="任务头  G(tau)"];
+  obs_papers -> raw [
+    style=dashed,
+    color="#8AB5D6",
+    arrowhead=none,
+    constraint=false
+  ];
+  task_papers -> consumer [
+    style=dashed,
+    color="#D49AAA",
+    arrowhead=none,
+    constraint=false
+  ];
+}

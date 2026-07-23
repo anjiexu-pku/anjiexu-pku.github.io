@@ -25,6 +25,15 @@ Education
 Publications
 ============
 
+* *SkillFab: An Agent-Native Skill Production Platform* <br/>
+**Anjie Xu**, Yifeng Cai, Yi Li, Zixing Wang, Zhiyu Zhang, Jingfan Chen, Ruohan Xu, Leye Wang <br/>
+**Technical Report**, 2026 <br/>
+[Report](https://github.com/cybtopia/skillfab-report/blob/main/skillfab-system-design.pdf) | [skillfab.ai](https://skillfab.ai/)
+
+<a class="homepage-preview" href="https://github.com/cybtopia/skillfab-report/blob/main/skillfab-system-design.pdf" aria-label="Open the SkillFab technical report">
+  <img src="/images/publications/skillfab-abstract-preview.png" alt="SkillFab technical report first page abstract preview">
+</a>
+
 * *SkillTester: Benchmarking Utility and Security of Agent Skills* <br/>
 Leye Wang, Zixing Wang, **Anjie Xu**  
 **arXiv:2603.28815**, 2026  
@@ -50,6 +59,20 @@ SkillTester is an agent-driven benchmark system for evaluating agent skills from
           style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
   </iframe>
 </div> -->
+
+Projects
+========
+
+<div class="project-feature">
+  <a class="project-feature__media" href="https://tanktechnology.github.io/CLRS-Lean/" aria-label="Open CLRS-Lean project page">
+    <img src="/images/projects/clrs-lean-logo.png" alt="CLRS-Lean project mark">
+  </a>
+  <div class="project-feature__body">
+    <h3 class="project-feature__title">CLRS-Lean</h3>
+    <p class="project-feature__description">A Lean 4 formalization project for CLRS-style algorithm correctness proofs, connecting classic algorithm reasoning with machine-checkable proofs.</p>
+    <p class="project-feature__links"><a class="project-feature__url" href="https://tanktechnology.github.io/CLRS-Lean/">tanktechnology.github.io/CLRS-Lean</a></p>
+  </div>
+</div>
 
 
 Blog
